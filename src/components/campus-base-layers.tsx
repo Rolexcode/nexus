@@ -9,7 +9,7 @@ export function CampusBaseLayers() {
         <TileLayer
           attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
           url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          maxNativeZoom={19}
+          maxNativeZoom={18}
           maxZoom={20}
         />
       </LayersControl.BaseLayer>

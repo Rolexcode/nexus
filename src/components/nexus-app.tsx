@@ -1,11 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Bookmark,
   Building2,
   Camera,
   Check,
@@ -16,12 +17,14 @@ import {
   Compass,
   Cross,
   EyeOff,
+  ExternalLink,
   FileImage,
   Flame,
   GraduationCap,
   Layers3,
   LockKeyhole,
   LocateFixed,
+  LogOut,
   MapPin,
   Menu,
   Navigation,
@@ -34,6 +37,7 @@ import {
   SlidersHorizontal,
   Store,
   Utensils,
+  UserRound,
   Wrench,
   X,
 } from "lucide-react";
@@ -48,6 +52,7 @@ import {
   type Place,
   type PlaceCategory,
 } from "@/lib/data";
+import { useLocalStorageState } from "@/lib/use-local-storage-state";
 
 const CampusMap = dynamic(
   () => import("./campus-map").then((module) => module.CampusMap),
@@ -80,6 +85,12 @@ const IncidentMap = dynamic(
 
 type View = "explore" | "services" | "reports" | "admin" | "provider";
 
+type UserProfile = {
+  name: string;
+  email: string;
+  matricNumber: string;
+};
+
 const categoryIcons: Record<PlaceCategory, typeof GraduationCap> = {
   Academic: GraduationCap,
   Administration: Building2,
@@ -107,7 +118,17 @@ function CategoryIcon({ category }: { category: PlaceCategory }) {
   );
 }
 
-function Header({ view, onViewChange }: { view: View; onViewChange: (view: View) => void }) {
+function Header({
+  view,
+  user,
+  onViewChange,
+  onAccount,
+}: {
+  view: View;
+  user: UserProfile | null;
+  onViewChange: (view: View) => void;
+  onAccount: () => void;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const selectView = (nextView: View) => {
@@ -171,6 +192,10 @@ function Header({ view, onViewChange }: { view: View; onViewChange: (view: View)
           <Plus size={17} aria-hidden="true" />
           List a service
         </button>
+        <button type="button" className="account-button" onClick={onAccount}>
+          <UserRound size={17} aria-hidden="true" />
+          {user ? user.name.split(" ")[0] : "Sign in"}
+        </button>
         <button
           type="button"
           className="icon-button mobile-menu-button"
@@ -189,6 +214,9 @@ function Header({ view, onViewChange }: { view: View; onViewChange: (view: View)
           <button type="button" onClick={() => selectView("reports")}>Report & track</button>
           <button type="button" onClick={() => selectView("admin")}>Admin view</button>
           <button type="button" onClick={() => selectView("provider")}>List a service</button>
+          <button type="button" onClick={() => { onAccount(); setMenuOpen(false); }}>
+            {user ? "My account" : "Sign in"}
+          </button>
         </nav>
       ) : null}
     </header>
@@ -261,15 +289,17 @@ function PlaceCard({
 
 function PlaceDetails({
   place,
-  routeActive,
-  onRoute,
+  saved,
+  onToggleSave,
   onClose,
 }: {
   place: Place;
-  routeActive: boolean;
-  onRoute: () => void;
+  saved: boolean;
+  onToggleSave: () => void;
   onClose: () => void;
 }) {
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.coordinates[0]},${place.coordinates[1]}`;
+
   return (
     <aside className="place-details" aria-label={`${place.name} details`}>
       <div className="details-heading">
@@ -311,19 +341,34 @@ function PlaceDetails({
         </div>
       ) : null}
 
-      <button className="primary-button route-button" type="button" onClick={onRoute}>
-        <Navigation size={18} aria-hidden="true" />
-        {routeActive ? "Hide route preview" : `Preview ${place.walkMinutes} min route`}
-      </button>
+      <div className="details-actions">
+        <a className="primary-button route-button" href={directionsUrl} target="_blank" rel="noreferrer">
+          <Navigation size={18} aria-hidden="true" />
+          Get directions <ExternalLink size={14} aria-hidden="true" />
+        </a>
+        <button className="secondary-button save-place-button" type="button" onClick={onToggleSave} aria-pressed={saved}>
+          <Bookmark size={17} aria-hidden="true" fill={saved ? "currentColor" : "none"} />
+          {saved ? "Saved" : "Save place"}
+        </button>
+      </div>
     </aside>
   );
 }
 
-function ExploreView() {
+function ExploreView({
+  selectedPlaceId,
+  savedPlaceIds,
+  onSelectPlace,
+  onToggleSave,
+}: {
+  selectedPlaceId: string | null;
+  savedPlaceIds: string[];
+  onSelectPlace: (place: Place | null) => void;
+  onToggleSave: (place: Place) => void;
+}) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<(typeof categories)[number]>("All");
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(places[0]);
-  const [routeActive, setRouteActive] = useState(false);
+  const selectedPlace = places.find((place) => place.id === selectedPlaceId) ?? null;
 
   const filteredPlaces = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -335,11 +380,11 @@ function ExploreView() {
       return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
   }, [category, query]);
+  const visibleSelectedPlace = selectedPlace && filteredPlaces.some((place) => place.id === selectedPlace.id)
+    ? selectedPlace
+    : null;
 
-  const selectPlace = (place: Place) => {
-    setSelectedPlace(place);
-    setRouteActive(false);
-  };
+  const selectPlace = (place: Place) => onSelectPlace(place);
 
   return (
     <main className="explore-page">
@@ -396,8 +441,7 @@ function ExploreView() {
       <section className="map-stage" aria-label="Interactive campus map">
         <CampusMap
           places={filteredPlaces}
-          selectedPlace={selectedPlace}
-          routeActive={routeActive}
+          selectedPlace={visibleSelectedPlace}
           onSelect={selectPlace}
         />
         <div className="map-context">
@@ -406,14 +450,14 @@ function ExploreView() {
         </div>
         <div className="map-legend" aria-label="Map data note">
           <ShieldCheck size={15} aria-hidden="true" />
-          Campus names from Prosper’s map · positions are prototype-aligned
+          Familiar campus names · marker alignment is being verified
         </div>
-        {selectedPlace ? (
+        {visibleSelectedPlace ? (
           <PlaceDetails
-            place={selectedPlace}
-            routeActive={routeActive}
-            onRoute={() => setRouteActive((active) => !active)}
-            onClose={() => { setSelectedPlace(null); setRouteActive(false); }}
+            place={visibleSelectedPlace}
+            saved={savedPlaceIds.includes(visibleSelectedPlace.id)}
+            onToggleSave={() => onToggleSave(visibleSelectedPlace)}
+            onClose={() => onSelectPlace(null)}
           />
         ) : null}
       </section>
@@ -421,7 +465,13 @@ function ExploreView() {
   );
 }
 
-function ServicesView({ onListService }: { onListService: () => void }) {
+function ServicesView({
+  onListService,
+  onViewPlace,
+}: {
+  onListService: () => void;
+  onViewPlace: (place: Place) => void;
+}) {
   const [query, setQuery] = useState("");
   const servicePlaces = places.filter((place) => place.provider);
   const filtered = servicePlaces.filter((place) =>
@@ -470,7 +520,7 @@ function ServicesView({ onListService }: { onListService: () => void }) {
               </div>
               <div className="service-card-footer">
                 <span><Clock3 size={15} aria-hidden="true" /> {place.hours}</span>
-                <button type="button" aria-label={`View ${place.name} on the campus map`}>
+                <button type="button" onClick={() => onViewPlace(place)} aria-label={`View ${place.name} on the campus map`}>
                   View on map <ArrowRight size={16} aria-hidden="true" />
                 </button>
               </div>
@@ -676,22 +726,24 @@ function IncidentReportForm({
 
 function ReportsView({
   incidents,
+  confirmedIncidentIds,
   onAddIncident,
   onConfirmIncident,
+  onRequestReport,
 }: {
   incidents: Incident[];
+  confirmedIncidentIds: string[];
   onAddIncident: (incident: Incident) => void;
   onConfirmIncident: (id: string) => void;
+  onRequestReport: (openForm: () => void) => void;
 }) {
   const [selectedId, setSelectedId] = useState(incidents[0]?.id);
   const [formOpen, setFormOpen] = useState(false);
-  const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
   const selected = incidents.find((incident) => incident.id === selectedId);
 
   const confirm = (id: string) => {
-    if (confirmedIds.has(id)) return;
+    if (confirmedIncidentIds.includes(id)) return;
     onConfirmIncident(id);
-    setConfirmedIds((current) => new Set(current).add(id));
   };
 
   const add = (incident: Incident) => {
@@ -707,7 +759,7 @@ function ReportsView({
           <span className="location-line"><Radio size={15} aria-hidden="true" /> Live campus reports</span>
           <h1>See it. Pin it.<br />Get it resolved.</h1>
           <p>Turn scattered campus complaints into verified, actionable reports.</p>
-          <button className="primary-button" type="button" onClick={() => setFormOpen(true)}>
+          <button className="primary-button" type="button" onClick={() => onRequestReport(() => setFormOpen(true))}>
             <Plus size={18} aria-hidden="true" /> Report an issue
           </button>
         </div>
@@ -721,7 +773,7 @@ function ReportsView({
               key={incident.id}
               incident={incident}
               selected={selectedId === incident.id}
-              confirmed={confirmedIds.has(incident.id)}
+              confirmed={confirmedIncidentIds.includes(incident.id)}
               onSelect={() => setSelectedId(incident.id)}
               onConfirm={() => confirm(incident.id)}
             />
@@ -852,7 +904,13 @@ const emptyListing: ListingForm = {
   announcement: "",
 };
 
-function ProviderView({ onBack }: { onBack: () => void }) {
+function ProviderView({
+  onBack,
+  onSave,
+}: {
+  onBack: () => void;
+  onSave: (listing: ListingForm) => void;
+}) {
   const [form, setForm] = useState<ListingForm>(emptyListing);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof ListingForm, string>>>({});
@@ -875,6 +933,7 @@ function ProviderView({ onBack }: { onBack: () => void }) {
       document.getElementById(firstField)?.focus();
       return;
     }
+    onSave(form);
     setSubmitted(true);
   };
 
@@ -1020,42 +1079,258 @@ function ProviderView({ onBack }: { onBack: () => void }) {
   );
 }
 
+function AccountDialog({
+  user,
+  reason,
+  savedCount,
+  reportCount,
+  onClose,
+  onSignIn,
+  onSignOut,
+}: {
+  user: UserProfile | null;
+  reason: string;
+  savedCount: number;
+  reportCount: number;
+  onClose: () => void;
+  onSignIn: (profile: UserProfile) => void;
+  onSignOut: () => void;
+}) {
+  const [form, setForm] = useState<UserProfile>({ name: "", email: "", matricNumber: "" });
+  const [errors, setErrors] = useState<Partial<Record<keyof UserProfile, string>>>({});
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  const update = (field: keyof UserProfile, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextErrors: Partial<Record<keyof UserProfile, string>> = {};
+    if (!form.name.trim()) nextErrors.name = "Enter your name.";
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) nextErrors.email = "Enter a valid email address.";
+    if (!form.matricNumber.trim()) nextErrors.matricNumber = "Enter your matric number.";
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      document.getElementById(`account-${Object.keys(nextErrors)[0]}`)?.focus();
+      return;
+    }
+    onSignIn({
+      name: form.name.trim(),
+      email: form.email.trim().toLowerCase(),
+      matricNumber: form.matricNumber.trim().toUpperCase(),
+    });
+  };
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-heading">
+        <div className="account-dialog-heading">
+          <div>
+            <span className="eyebrow">Nexus account</span>
+            <h2 id="account-heading">{user ? `Welcome, ${user.name.split(" ")[0]}` : "Keep your campus activity together"}</h2>
+          </div>
+          <button ref={closeButtonRef} className="icon-button" type="button" onClick={onClose} aria-label="Close account dialog">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        {user ? (
+          <>
+            <div className="account-profile">
+              <span className="account-avatar" aria-hidden="true">{user.name.charAt(0).toUpperCase()}</span>
+              <span><strong>{user.name}</strong><small>{user.matricNumber} · {user.email}</small></span>
+            </div>
+            <div className="account-stats" aria-label="Account activity">
+              <div><strong>{savedCount}</strong><span>Saved places</span></div>
+              <div><strong>{reportCount}</strong><span>Reports submitted</span></div>
+            </div>
+            <p className="account-note">This account is stored only in this browser for the frontend prototype. Secure authentication will replace it when the backend is connected.</p>
+            <button className="secondary-button sign-out-button" type="button" onClick={onSignOut}>
+              <LogOut size={17} aria-hidden="true" /> Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            {reason ? <div className="account-reason"><LockKeyhole size={17} aria-hidden="true" /><span>{reason}</span></div> : null}
+            <p className="account-intro">Create a local demo profile to save places, submit reports and draft service listings.</p>
+            <form className="account-form" onSubmit={submit} noValidate>
+              <div className="field-group">
+                <label htmlFor="account-name">Full name <span>*</span></label>
+                <input id="account-name" autoComplete="name" value={form.name} onChange={(event) => update("name", event.target.value)} aria-invalid={Boolean(errors.name)} />
+                {errors.name ? <p className="field-error">{errors.name}</p> : null}
+              </div>
+              <div className="field-group">
+                <label htmlFor="account-email">Email <span>*</span></label>
+                <input id="account-email" type="email" autoComplete="email" value={form.email} onChange={(event) => update("email", event.target.value)} aria-invalid={Boolean(errors.email)} />
+                {errors.email ? <p className="field-error">{errors.email}</p> : null}
+              </div>
+              <div className="field-group">
+                <label htmlFor="account-matricNumber">Matric number <span>*</span></label>
+                <input id="account-matricNumber" autoComplete="off" value={form.matricNumber} onChange={(event) => update("matricNumber", event.target.value)} aria-invalid={Boolean(errors.matricNumber)} />
+                {errors.matricNumber ? <p className="field-error">{errors.matricNumber}</p> : null}
+              </div>
+              <p className="account-note"><LockKeyhole size={14} aria-hidden="true" /> No password is collected or stored in this prototype.</p>
+              <button className="primary-button account-submit" type="submit">Create demo account <ArrowRight size={17} aria-hidden="true" /></button>
+            </form>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export function NexusApp() {
   const [view, setView] = useState<View>("explore");
-  const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(places[0]?.id ?? null);
+  const [user, setUser] = useLocalStorageState<UserProfile | null>("nexus-user", null);
+  const [savedPlaceIds, setSavedPlaceIds] = useLocalStorageState<string[]>("nexus-saved-places", []);
+  const [incidents, setIncidents] = useLocalStorageState<Incident[]>("nexus-incidents", initialIncidents);
+  const [submittedReports, setSubmittedReports] = useLocalStorageState<string[]>("nexus-submitted-reports", []);
+  const [confirmedIncidentIds, setConfirmedIncidentIds] = useLocalStorageState<string[]>("nexus-confirmed-incidents", []);
+  const [, setProviderListings] = useLocalStorageState<ListingForm[]>("nexus-provider-listings", []);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountReason, setAccountReason] = useState("");
+  const [toast, setToast] = useState("");
+  const pendingAction = useRef<null | (() => void)>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const requireAccount = (reason: string, action: () => void) => {
+    if (user) {
+      action();
+      return;
+    }
+    pendingAction.current = action;
+    setAccountReason(reason);
+    setAccountOpen(true);
+  };
+
+  const signIn = (profile: UserProfile) => {
+    setUser(profile);
+    setAccountOpen(false);
+    setToast(`Welcome to Nexus, ${profile.name.split(" ")[0]}.`);
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    window.setTimeout(() => action?.(), 0);
+  };
+
+  const toggleSavedPlace = (place: Place) => {
+    requireAccount("Sign in to keep saved campus places on this device.", () => {
+      setSavedPlaceIds((current) => current.includes(place.id)
+        ? current.filter((id) => id !== place.id)
+        : [...current, place.id]);
+      setToast(savedPlaceIds.includes(place.id) ? `${place.name} removed from saved places.` : `${place.name} saved.`);
+    });
+  };
 
   const addIncident = (incident: Incident) => {
     setIncidents((current) => [incident, ...current]);
+    setSubmittedReports((current) => [incident.id, ...current]);
+    setToast("Report submitted and saved on this device.");
   };
 
   const confirmIncident = (id: string) => {
+    if (confirmedIncidentIds.includes(id)) return;
     setIncidents((current) => current.map((incident) => (
       incident.id === id ? { ...incident, confirmations: incident.confirmations + 1 } : incident
     )));
+    setConfirmedIncidentIds((current) => [...current, id]);
+    setToast("Your confirmation was recorded.");
   };
 
   const updateIncidentStatus = (id: string, status: IncidentStatus) => {
     setIncidents((current) => current.map((incident) => (
       incident.id === id ? { ...incident, status } : incident
     )));
+    setToast(`Report status changed to ${status}.`);
+  };
+
+  const openProvider = () => requireAccount("Sign in before creating a campus service listing.", () => setView("provider"));
+
+  const viewPlace = (place: Place) => {
+    setSelectedPlaceId(place.id);
+    setView("explore");
   };
 
   return (
     <div className="app-shell">
-      <Header view={view} onViewChange={setView} />
-      {view === "explore" ? <ExploreView /> : null}
-      {view === "services" ? <ServicesView onListService={() => setView("provider")} /> : null}
+      <Header
+        view={view}
+        user={user}
+        onViewChange={(nextView) => nextView === "provider" ? openProvider() : setView(nextView)}
+        onAccount={() => { setAccountReason(""); setAccountOpen(true); }}
+      />
+      {view === "explore" ? (
+        <ExploreView
+          selectedPlaceId={selectedPlaceId}
+          savedPlaceIds={savedPlaceIds}
+          onSelectPlace={(place) => setSelectedPlaceId(place?.id ?? null)}
+          onToggleSave={toggleSavedPlace}
+        />
+      ) : null}
+      {view === "services" ? <ServicesView onListService={openProvider} onViewPlace={viewPlace} /> : null}
       {view === "reports" ? (
         <ReportsView
           incidents={incidents}
+          confirmedIncidentIds={confirmedIncidentIds}
           onAddIncident={addIncident}
           onConfirmIncident={confirmIncident}
+          onRequestReport={(openForm) => requireAccount("Sign in before submitting a campus report.", openForm)}
         />
       ) : null}
       {view === "admin" ? (
         <AdminView incidents={incidents} onStatusChange={updateIncidentStatus} />
       ) : null}
-      {view === "provider" ? <ProviderView onBack={() => setView("services")} /> : null}
+      {view === "provider" ? (
+        <ProviderView
+          onBack={() => setView("services")}
+          onSave={(listing) => {
+            setProviderListings((current) => [listing, ...current]);
+            setToast("Service listing draft saved on this device.");
+          }}
+        />
+      ) : null}
+      {accountOpen ? (
+        <AccountDialog
+          user={user}
+          reason={accountReason}
+          savedCount={savedPlaceIds.length}
+          reportCount={submittedReports.length}
+          onClose={() => { setAccountOpen(false); pendingAction.current = null; }}
+          onSignIn={signIn}
+          onSignOut={() => {
+            setUser(null);
+            setSavedPlaceIds([]);
+            setSubmittedReports([]);
+            setConfirmedIncidentIds([]);
+            setAccountOpen(false);
+            setToast("Signed out of the local Nexus account.");
+          }}
+        />
+      ) : null}
+      {toast ? <div className="toast" role="status" aria-live="polite"><CheckCircle2 size={17} aria-hidden="true" />{toast}</div> : null}
     </div>
   );
 }

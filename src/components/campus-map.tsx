@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import L from "leaflet";
 import {
   MapContainer,
   Marker,
-  Polyline,
   Popup,
+  ScaleControl,
   Tooltip,
   ZoomControl,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import { CampusBaseLayers } from "./campus-base-layers";
 import {
   CAMPUS_CENTER,
-  CAMPUS_GATE,
   categoryClass,
   type Place,
 } from "@/lib/data";
@@ -22,9 +22,52 @@ import {
 type CampusMapProps = {
   places: Place[];
   selectedPlace: Place | null;
-  routeActive: boolean;
   onSelect: (place: Place) => void;
 };
+
+function ZoomAwareMarkers({
+  places,
+  selectedPlace,
+  onSelect,
+}: Omit<CampusMapProps, "routeActive">) {
+  const map = useMapEvents({
+    zoomend: () => setZoom(map.getZoom()),
+  });
+  const [zoom, setZoom] = useState(map.getZoom());
+
+  return places.map((place) => {
+    const selected = selectedPlace?.id === place.id;
+    const showLabel = selected || (zoom >= 19 && place.dataQuality === "mapped");
+
+    return (
+      <Marker
+        key={place.id}
+        position={place.coordinates}
+        icon={makeIcon(place, selected)}
+        eventHandlers={{ click: () => onSelect(place) }}
+        title={place.name}
+        alt={place.name}
+        riseOnHover
+      >
+        <Popup>
+          <strong>{place.name}</strong>
+          <span>{place.category}</span>
+        </Popup>
+        {showLabel ? (
+          <Tooltip
+            permanent
+            direction="top"
+            offset={[0, -34]}
+            className="campus-place-label"
+            opacity={1}
+          >
+            {place.name}
+          </Tooltip>
+        ) : null}
+      </Marker>
+    );
+  });
+}
 
 function MapFocus({ place }: { place: Place | null }) {
   const map = useMap();
@@ -53,7 +96,6 @@ function makeIcon(place: Place, selected: boolean) {
 export function CampusMap({
   places,
   selectedPlace,
-  routeActive,
   onSelect,
 }: CampusMapProps) {
   return (
@@ -68,42 +110,9 @@ export function CampusMap({
     >
       <CampusBaseLayers />
       <ZoomControl position="bottomright" />
+      <ScaleControl position="bottomleft" imperial={false} />
       <MapFocus place={selectedPlace} />
-
-      {places.map((place) => (
-        <Marker
-          key={place.id}
-          position={place.coordinates}
-          icon={makeIcon(place, selectedPlace?.id === place.id)}
-          eventHandlers={{ click: () => onSelect(place) }}
-          title={place.name}
-          alt={place.name}
-          riseOnHover
-        >
-          <Popup>
-            <strong>{place.name}</strong>
-            <span>{place.category}</span>
-          </Popup>
-          {place.dataQuality === "mapped" ? (
-            <Tooltip
-              permanent
-              direction="top"
-              offset={[0, -34]}
-              className="campus-place-label"
-              opacity={1}
-            >
-              {place.name}
-            </Tooltip>
-          ) : null}
-        </Marker>
-      ))}
-
-      {routeActive && selectedPlace ? (
-        <Polyline
-          positions={[CAMPUS_GATE, selectedPlace.coordinates]}
-          pathOptions={{ color: "#171717", weight: 5, opacity: 0.85, dashArray: "3 9" }}
-        />
-      ) : null}
+      <ZoomAwareMarkers places={places} selectedPlace={selectedPlace} onSelect={onSelect} />
     </MapContainer>
   );
 }
