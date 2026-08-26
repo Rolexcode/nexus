@@ -37,12 +37,12 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+import { lasuEpePlaces as places } from "@/data/lasu-epe";
 import {
   categories,
   categoryClass,
   incidentCategories,
   initialIncidents,
-  places,
   type Incident,
   type IncidentStatus,
   type Place,
@@ -86,6 +86,7 @@ const categoryIcons: Record<PlaceCategory, typeof GraduationCap> = {
   "Food & drink": Utensils,
   Health: Cross,
   Transport: Navigation,
+  Community: MapPin,
   "Business & service": ShoppingBag,
 };
 
@@ -400,12 +401,12 @@ function ExploreView() {
           onSelect={selectPlace}
         />
         <div className="map-context">
-          <span className="live-dot" />
-          LASU Epe · campus view
+          <Layers3 size={15} aria-hidden="true" />
+          LASU Epe · satellite campus map
         </div>
         <div className="map-legend" aria-label="Map data note">
           <ShieldCheck size={15} aria-hidden="true" />
-          One mapped pin · remaining pins are demo placements
+          Campus names from Prosper’s map · positions are prototype-aligned
         </div>
         {selectedPlace ? (
           <PlaceDetails

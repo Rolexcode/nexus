@@ -7,10 +7,11 @@ import {
   Marker,
   Polyline,
   Popup,
-  TileLayer,
+  Tooltip,
   ZoomControl,
   useMap,
 } from "react-leaflet";
+import { CampusBaseLayers } from "./campus-base-layers";
 import {
   CAMPUS_CENTER,
   CAMPUS_GATE,
@@ -65,10 +66,7 @@ export function CampusMap({
       className="campus-map"
       attributionControl
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <CampusBaseLayers />
       <ZoomControl position="bottomright" />
       <MapFocus place={selectedPlace} />
 
@@ -80,11 +78,23 @@ export function CampusMap({
           eventHandlers={{ click: () => onSelect(place) }}
           title={place.name}
           alt={place.name}
+          riseOnHover
         >
           <Popup>
             <strong>{place.name}</strong>
             <span>{place.category}</span>
           </Popup>
+          {place.dataQuality === "mapped" ? (
+            <Tooltip
+              permanent
+              direction="top"
+              offset={[0, -34]}
+              className="campus-place-label"
+              opacity={1}
+            >
+              {place.name}
+            </Tooltip>
+          ) : null}
         </Marker>
       ))}
 

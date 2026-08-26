@@ -6,11 +6,11 @@ import {
   CircleMarker,
   MapContainer,
   Popup,
-  TileLayer,
   ZoomControl,
   useMap,
 } from "react-leaflet";
 import { CAMPUS_CENTER, type Incident } from "@/lib/data";
+import { CampusBaseLayers } from "./campus-base-layers";
 
 type IncidentMapProps = {
   incidents: Incident[];
@@ -45,10 +45,7 @@ export function IncidentMap({ incidents, selectedId, heatmap = false, onSelect }
       zoomControl={false}
       className="campus-map"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <CampusBaseLayers />
       <ZoomControl position="bottomright" />
       <IncidentFocus incident={selected} />
       {incidents.map((incident) => (
