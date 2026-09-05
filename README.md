@@ -5,14 +5,17 @@ Nexus is a campus intelligence platform starting with LASU Epe. It helps student
 ## Core prototype
 
 - Searchable campus map and place categories
-- Place and service details with route previews
+- Place and service details with in-app direction previews
+- Optional student accounts with institution and campus selection
 - Provider listings and service updates
 - Geotagged campus incident reporting
 - Private reporter identity with optional public anonymity
-- Community confirmations and incident status tracking
+- Campus-restricted student attestations and incident status tracking
 - Administrative incident metrics, heatmap, and action workflow
 
 The prototype deliberately excludes jobs, freelance marketplace features, payments, and CampusGig functionality.
+
+The current account, report and attestation state is stored locally for frontend demonstration. See [BACKEND.md](BACKEND.md) for the server-enforced campus membership and data model required before production.
 
 ## Run locally
 

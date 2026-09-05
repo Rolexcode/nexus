@@ -17,7 +17,6 @@ import {
   Compass,
   Cross,
   EyeOff,
-  ExternalLink,
   FileImage,
   Flame,
   GraduationCap,
@@ -30,11 +29,13 @@ import {
   Navigation,
   Plus,
   Radio,
+  Route,
   Search,
   Send,
   ShieldCheck,
   ShoppingBag,
   SlidersHorizontal,
+  School,
   Store,
   Utensils,
   UserRound,
@@ -42,12 +43,22 @@ import {
   X,
 } from "lucide-react";
 import { lasuEpePlaces as places } from "@/data/lasu-epe";
+import { buildCampusDirectionPlan } from "@/lib/campus-directions";
+import {
+  NEXUS_CAMPUS_ID,
+  getCampus,
+  getInstitution,
+  institutions,
+  isNexusCampusMember,
+} from "@/lib/campuses";
 import {
   categories,
   categoryClass,
   incidentCategories,
   initialIncidents,
   type Incident,
+  type AttestationKind,
+  type IncidentAttestation,
   type IncidentStatus,
   type Place,
   type PlaceCategory,
@@ -86,9 +97,32 @@ const IncidentMap = dynamic(
 type View = "explore" | "services" | "reports" | "admin" | "provider";
 
 type UserProfile = {
+  id: string;
   name: string;
   email: string;
   matricNumber: string;
+  institutionId: string;
+  campusId: string;
+  department: string;
+  level: string;
+  membershipStatus: "demo-verified";
+};
+
+type AccountForm = Omit<UserProfile, "id" | "membershipStatus">;
+
+const emptyAccountForm: AccountForm = {
+  name: "",
+  email: "",
+  matricNumber: "",
+  institutionId: "lasu",
+  campusId: NEXUS_CAMPUS_ID,
+  department: "",
+  level: "",
+};
+
+type PendingAction = {
+  action: (profile: UserProfile) => void;
+  campusOnly: boolean;
 };
 
 const categoryIcons: Record<PlaceCategory, typeof GraduationCap> = {
@@ -298,7 +332,10 @@ function PlaceDetails({
   onToggleSave: () => void;
   onClose: () => void;
 }) {
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.coordinates[0]},${place.coordinates[1]}`;
+  const [directionsOpen, setDirectionsOpen] = useState(false);
+  const [startPlaceId, setStartPlaceId] = useState("main-gate");
+  const startPlace = places.find((item) => item.id === startPlaceId) ?? places[0];
+  const directionPlan = buildCampusDirectionPlan(startPlace, place);
 
   return (
     <aside className="place-details" aria-label={`${place.name} details`}>
@@ -342,15 +379,41 @@ function PlaceDetails({
       ) : null}
 
       <div className="details-actions">
-        <a className="primary-button route-button" href={directionsUrl} target="_blank" rel="noreferrer">
-          <Navigation size={18} aria-hidden="true" />
-          Get directions <ExternalLink size={14} aria-hidden="true" />
-        </a>
+        <button className="primary-button route-button" type="button" onClick={() => setDirectionsOpen((open) => !open)} aria-expanded={directionsOpen}>
+          <Route size={18} aria-hidden="true" />
+          {directionsOpen ? "Hide directions" : "Directions"}
+        </button>
         <button className="secondary-button save-place-button" type="button" onClick={onToggleSave} aria-pressed={saved}>
           <Bookmark size={17} aria-hidden="true" fill={saved ? "currentColor" : "none"} />
           {saved ? "Saved" : "Save place"}
         </button>
       </div>
+
+      {directionsOpen ? (
+        <section className="direction-panel" aria-labelledby="direction-heading">
+          <div className="direction-heading">
+            <div>
+              <span className="eyebrow">On-campus preview</span>
+              <h3 id="direction-heading">Route to {place.name}</h3>
+            </div>
+            <span className="direction-time">{directionPlan.walkingMinutes} min</span>
+          </div>
+          <label htmlFor="direction-start">Starting point</label>
+          <select id="direction-start" value={startPlaceId} onChange={(event) => setStartPlaceId(event.target.value)}>
+            {places.filter((item) => item.dataQuality === "mapped").map((item) => (
+              <option value={item.id} key={item.id}>{item.name}</option>
+            ))}
+          </select>
+          <div className="direction-summary">
+            <Navigation size={17} aria-hidden="true" />
+            <span><strong>{directionPlan.distanceMetres} m</strong> approximate direct distance · head {directionPlan.direction}</span>
+          </div>
+          <ol className="direction-steps">
+            {directionPlan.steps.map((step) => <li key={step}>{step}</li>)}
+          </ol>
+          <p className="direction-disclaimer"><CircleHelp size={14} aria-hidden="true" /> This preview uses verified place pins, not yet the surveyed walkway network. Confirm paths on the ground.</p>
+        </section>
+      ) : null}
     </aside>
   );
 }
@@ -546,15 +609,17 @@ function StatusPill({ status }: { status: IncidentStatus }) {
 function IncidentCard({
   incident,
   selected,
-  confirmed,
+  attestation,
+  ownReport,
   onSelect,
-  onConfirm,
+  onAttest,
 }: {
   incident: Incident;
   selected: boolean;
-  confirmed: boolean;
+  attestation?: IncidentAttestation;
+  ownReport: boolean;
   onSelect: () => void;
-  onConfirm: () => void;
+  onAttest: () => void;
 }) {
   return (
     <article className={`incident-card${selected ? " selected" : ""}`}>
@@ -571,11 +636,11 @@ function IncidentCard({
         <ChevronRight size={17} aria-hidden="true" />
       </button>
       <div className="incident-card-footer">
-        <span><Radio size={14} aria-hidden="true" /> {incident.confirmations} student confirmations</span>
+        <span><Radio size={14} aria-hidden="true" /> {incident.confirmations} student attestations</span>
         {incident.status !== "Resolved" ? (
-          <button type="button" onClick={onConfirm} disabled={confirmed}>
-            {confirmed ? <Check size={15} aria-hidden="true" /> : <Plus size={15} aria-hidden="true" />}
-            {confirmed ? "Confirmed" : "I can confirm"}
+          <button type="button" onClick={onAttest} disabled={Boolean(attestation) || ownReport}>
+            {attestation || ownReport ? <Check size={15} aria-hidden="true" /> : <Plus size={15} aria-hidden="true" />}
+            {ownReport ? "Your report" : attestation ? "Attested" : "Attest"}
           </button>
         ) : null}
       </div>
@@ -588,6 +653,7 @@ type IncidentDraft = {
   title: string;
   description: string;
   landmark: string;
+  placeId: string;
   anonymous: boolean;
   fileName: string;
 };
@@ -597,14 +663,17 @@ const emptyIncidentDraft: IncidentDraft = {
   title: "",
   description: "",
   landmark: "",
+  placeId: "engineering-hall",
   anonymous: true,
   fileName: "",
 };
 
 function IncidentReportForm({
+  reporter,
   onCancel,
   onSubmit,
 }: {
+  reporter: UserProfile;
   onCancel: () => void;
   onSubmit: (incident: Incident) => void;
 }) {
@@ -632,13 +701,15 @@ function IncidentReportForm({
       title: draft.title.trim(),
       category: draft.category,
       description: draft.description.trim(),
-      coordinates: [6.59402, 3.99562],
+      coordinates: places.find((place) => place.id === draft.placeId)?.coordinates ?? [6.59402, 3.99562],
       landmark: draft.landmark.trim(),
       reportedAt: "Just now",
       confirmations: 1,
       severity: draft.category === "Safety" || draft.category === "Electrical hazard" ? "High" : "Medium",
       status: "Reported",
       anonymous: draft.anonymous,
+      campusId: reporter.campusId,
+      reportedBy: reporter.id,
       evidenceLabel: draft.fileName ? `Photo selected: ${draft.fileName}` : undefined,
     });
   };
@@ -655,6 +726,10 @@ function IncidentReportForm({
         </button>
       </div>
       <form onSubmit={submit} noValidate>
+        <div className="campus-boundary-note">
+          <School size={17} aria-hidden="true" />
+          <span><strong>LASU Epe report</strong>This report is tied to your verified demo campus membership.</span>
+        </div>
         <div className="field-group">
           <label htmlFor="incident-category">Issue category <span>*</span></label>
           <select id="incident-category" value={draft.category} onChange={(event) => update("category", event.target.value as Incident["category"])}>
@@ -686,6 +761,14 @@ function IncidentReportForm({
             aria-describedby={errors.description ? "incident-description-error" : undefined}
           />
           {errors.description ? <p className="field-error" id="incident-description-error">{errors.description}</p> : null}
+        </div>
+        <div className="field-group">
+          <label htmlFor="incident-placeId">Pin report near <span>*</span></label>
+          <select id="incident-placeId" value={draft.placeId} onChange={(event) => update("placeId", event.target.value)}>
+            {places.filter((place) => place.dataQuality === "mapped").map((place) => (
+              <option value={place.id} key={place.id}>{place.name}</option>
+            ))}
+          </select>
         </div>
         <div className="field-group">
           <label htmlFor="incident-landmark">Nearest landmark <span>*</span></label>
@@ -726,25 +809,22 @@ function IncidentReportForm({
 
 function ReportsView({
   incidents,
-  confirmedIncidentIds,
+  user,
+  attestations,
   onAddIncident,
-  onConfirmIncident,
+  onRequestAttestation,
   onRequestReport,
 }: {
   incidents: Incident[];
-  confirmedIncidentIds: string[];
+  user: UserProfile | null;
+  attestations: IncidentAttestation[];
   onAddIncident: (incident: Incident) => void;
-  onConfirmIncident: (id: string) => void;
+  onRequestAttestation: (incident: Incident) => void;
   onRequestReport: (openForm: () => void) => void;
 }) {
   const [selectedId, setSelectedId] = useState(incidents[0]?.id);
   const [formOpen, setFormOpen] = useState(false);
   const selected = incidents.find((incident) => incident.id === selectedId);
-
-  const confirm = (id: string) => {
-    if (confirmedIncidentIds.includes(id)) return;
-    onConfirmIncident(id);
-  };
 
   const add = (incident: Incident) => {
     onAddIncident(incident);
@@ -773,9 +853,10 @@ function ReportsView({
               key={incident.id}
               incident={incident}
               selected={selectedId === incident.id}
-              confirmed={confirmedIncidentIds.includes(incident.id)}
+              attestation={attestations.find((item) => item.incidentId === incident.id && item.userId === user?.id)}
+              ownReport={Boolean(user && incident.reportedBy === user.id)}
               onSelect={() => setSelectedId(incident.id)}
-              onConfirm={() => confirm(incident.id)}
+              onAttest={() => onRequestAttestation(incident)}
             />
           ))}
         </div>
@@ -798,7 +879,7 @@ function ReportsView({
             <div className="incident-detail-meta">
               <span><MapPin size={16} aria-hidden="true" /> {selected.landmark}</span>
               <span><Clock3 size={16} aria-hidden="true" /> Reported {selected.reportedAt}</span>
-              <span><Radio size={16} aria-hidden="true" /> {selected.confirmations} confirmations</span>
+              <span><Radio size={16} aria-hidden="true" /> {selected.confirmations} student attestations</span>
               {selected.evidenceLabel ? <span><Camera size={16} aria-hidden="true" /> {selected.evidenceLabel}</span> : null}
             </div>
             <div className="status-path" aria-label={`Incident status: ${selected.status}`}>
@@ -808,9 +889,73 @@ function ReportsView({
             </div>
           </aside>
         ) : null}
-        {formOpen ? <IncidentReportForm onCancel={() => setFormOpen(false)} onSubmit={add} /> : null}
+        {formOpen && user ? <IncidentReportForm reporter={user} onCancel={() => setFormOpen(false)} onSubmit={add} /> : null}
       </section>
     </main>
+  );
+}
+
+const attestationOptions: Array<{ kind: AttestationKind; title: string; description: string }> = [
+  { kind: "still-happening", title: "Still happening", description: "The issue is still present right now." },
+  { kind: "saw-it-too", title: "I saw this too", description: "You personally observed the reported issue." },
+  { kind: "looks-resolved", title: "Looks resolved", description: "The issue appears to have been fixed or cleared." },
+];
+
+function AttestationDialog({
+  incident,
+  onClose,
+  onSubmit,
+}: {
+  incident: Incident;
+  onClose: () => void;
+  onSubmit: (kind: AttestationKind) => void;
+}) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="account-dialog attestation-dialog" role="dialog" aria-modal="true" aria-labelledby="attestation-heading">
+        <div className="account-dialog-heading">
+          <div>
+            <span className="eyebrow">LASU Epe attestation</span>
+            <h2 id="attestation-heading">What can you confirm?</h2>
+          </div>
+          <button ref={closeButtonRef} className="icon-button" type="button" onClick={onClose} aria-label="Close attestation dialog">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="attestation-incident">
+          <span className={`severity-mark ${incident.severity.toLowerCase()}`} aria-hidden="true" />
+          <span><strong>{incident.title}</strong><small>{incident.landmark}</small></span>
+        </div>
+        <p className="account-intro">Choose only what you personally know. Nexus records one response per campus account.</p>
+        <div className="attestation-options">
+          {attestationOptions.map((option) => (
+            <button type="button" key={option.kind} onClick={() => onSubmit(option.kind)}>
+              <span><strong>{option.title}</strong><small>{option.description}</small></span>
+              <ArrowRight size={17} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+        <p className="account-note"><ShieldCheck size={14} aria-hidden="true" /> Only the matching verified campus membership can attest. The backend will enforce this rule.</p>
+      </section>
+    </div>
   );
 }
 
@@ -1096,9 +1241,10 @@ function AccountDialog({
   onSignIn: (profile: UserProfile) => void;
   onSignOut: () => void;
 }) {
-  const [form, setForm] = useState<UserProfile>({ name: "", email: "", matricNumber: "" });
-  const [errors, setErrors] = useState<Partial<Record<keyof UserProfile, string>>>({});
+  const [form, setForm] = useState<AccountForm>(emptyAccountForm);
+  const [errors, setErrors] = useState<Partial<Record<keyof AccountForm, string>>>({});
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const selectedInstitution = getInstitution(form.institutionId) ?? institutions[0];
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -1114,26 +1260,34 @@ function AccountDialog({
     };
   }, [onClose]);
 
-  const update = (field: keyof UserProfile, value: string) => {
+  const update = (field: keyof AccountForm, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const nextErrors: Partial<Record<keyof UserProfile, string>> = {};
+    const nextErrors: Partial<Record<keyof AccountForm, string>> = {};
     if (!form.name.trim()) nextErrors.name = "Enter your name.";
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) nextErrors.email = "Enter a valid email address.";
     if (!form.matricNumber.trim()) nextErrors.matricNumber = "Enter your matric number.";
+    if (!form.institutionId) nextErrors.institutionId = "Choose your institution.";
+    if (!form.campusId) nextErrors.campusId = "Choose your campus.";
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
       document.getElementById(`account-${Object.keys(nextErrors)[0]}`)?.focus();
       return;
     }
     onSignIn({
+      id: crypto.randomUUID(),
       name: form.name.trim(),
       email: form.email.trim().toLowerCase(),
       matricNumber: form.matricNumber.trim().toUpperCase(),
+      institutionId: form.institutionId,
+      campusId: form.campusId,
+      department: form.department.trim(),
+      level: form.level,
+      membershipStatus: "demo-verified",
     });
   };
 
@@ -1156,7 +1310,15 @@ function AccountDialog({
           <>
             <div className="account-profile">
               <span className="account-avatar" aria-hidden="true">{user.name.charAt(0).toUpperCase()}</span>
-              <span><strong>{user.name}</strong><small>{user.matricNumber} · {user.email}</small></span>
+              <span>
+                <strong>{user.name}</strong>
+                <small>{user.matricNumber} · {user.email}</small>
+                <small>{getInstitution(user.institutionId)?.shortName ?? "Campus"} · {getCampus(user.campusId)?.name ?? user.campusId}</small>
+              </span>
+            </div>
+            <div className={`membership-badge${isNexusCampusMember(user.campusId) ? " eligible" : ""}`}>
+              <ShieldCheck size={16} aria-hidden="true" />
+              <span><strong>Demo campus membership</strong>{isNexusCampusMember(user.campusId) ? "Eligible for LASU Epe community actions" : "Browse-only access on LASU Epe"}</span>
             </div>
             <div className="account-stats" aria-label="Account activity">
               <div><strong>{savedCount}</strong><span>Saved places</span></div>
@@ -1170,22 +1332,62 @@ function AccountDialog({
         ) : (
           <>
             {reason ? <div className="account-reason"><LockKeyhole size={17} aria-hidden="true" /><span>{reason}</span></div> : null}
-            <p className="account-intro">Create a local demo profile to save places, submit reports and draft service listings.</p>
+            <p className="account-intro">Create a local demo profile. Browsing stays open, while reports and attestations are restricted to the account’s selected campus.</p>
             <form className="account-form" onSubmit={submit} noValidate>
               <div className="field-group">
                 <label htmlFor="account-name">Full name <span>*</span></label>
-                <input id="account-name" autoComplete="name" value={form.name} onChange={(event) => update("name", event.target.value)} aria-invalid={Boolean(errors.name)} />
-                {errors.name ? <p className="field-error">{errors.name}</p> : null}
+                <input id="account-name" type="text" autoComplete="name" spellCheck={false} value={form.name} onChange={(event) => update("name", event.target.value)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "account-name-error" : undefined} />
+                {errors.name ? <p className="field-error" id="account-name-error">{errors.name}</p> : null}
               </div>
               <div className="field-group">
                 <label htmlFor="account-email">Email <span>*</span></label>
-                <input id="account-email" type="email" autoComplete="email" value={form.email} onChange={(event) => update("email", event.target.value)} aria-invalid={Boolean(errors.email)} />
-                {errors.email ? <p className="field-error">{errors.email}</p> : null}
+                <input id="account-email" type="email" autoComplete="email" spellCheck={false} value={form.email} onChange={(event) => update("email", event.target.value)} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "account-email-error" : undefined} />
+                {errors.email ? <p className="field-error" id="account-email-error">{errors.email}</p> : null}
               </div>
-              <div className="field-group">
-                <label htmlFor="account-matricNumber">Matric number <span>*</span></label>
-                <input id="account-matricNumber" autoComplete="off" value={form.matricNumber} onChange={(event) => update("matricNumber", event.target.value)} aria-invalid={Boolean(errors.matricNumber)} />
-                {errors.matricNumber ? <p className="field-error">{errors.matricNumber}</p> : null}
+              <fieldset className="account-campus-fields">
+                <legend>Campus membership</legend>
+                <div className="field-group">
+                  <label htmlFor="account-institutionId">Institution <span>*</span></label>
+                  <select
+                    id="account-institutionId"
+                    value={form.institutionId}
+                    onChange={(event) => {
+                      const institution = getInstitution(event.target.value) ?? institutions[0];
+                      setForm((current) => ({ ...current, institutionId: institution.id, campusId: institution.campuses[0]?.id ?? "" }));
+                    }}
+                  >
+                    {institutions.map((institution) => <option value={institution.id} key={institution.id}>{institution.name}</option>)}
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label htmlFor="account-campusId">Campus <span>*</span></label>
+                  <select id="account-campusId" value={form.campusId} onChange={(event) => update("campusId", event.target.value)}>
+                    {selectedInstitution.campuses.map((campus) => <option value={campus.id} key={campus.id}>{campus.name}</option>)}
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label htmlFor="account-matricNumber">Matric number <span>*</span></label>
+                  <input id="account-matricNumber" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={form.matricNumber} onChange={(event) => update("matricNumber", event.target.value)} aria-invalid={Boolean(errors.matricNumber)} aria-describedby={errors.matricNumber ? "account-matricNumber-error" : undefined} />
+                  {errors.matricNumber ? <p className="field-error" id="account-matricNumber-error">{errors.matricNumber}</p> : null}
+                </div>
+              </fieldset>
+              <div className="form-row">
+                <div className="field-group">
+                  <label htmlFor="account-department">Department <span className="optional">Optional</span></label>
+                  <input id="account-department" type="text" autoComplete="organization-title" value={form.department} onChange={(event) => update("department", event.target.value)} placeholder="e.g. Mechanical Engineering" />
+                </div>
+                <div className="field-group">
+                  <label htmlFor="account-level">Level <span className="optional">Optional</span></label>
+                  <select id="account-level" value={form.level} onChange={(event) => update("level", event.target.value)}>
+                    <option value="">Select level</option>
+                    <option value="100">100 level</option>
+                    <option value="200">200 level</option>
+                    <option value="300">300 level</option>
+                    <option value="400">400 level</option>
+                    <option value="500">500 level</option>
+                    <option value="postgraduate">Postgraduate</option>
+                  </select>
+                </div>
               </div>
               <p className="account-note"><LockKeyhole size={14} aria-hidden="true" /> No password is collected or stored in this prototype.</p>
               <button className="primary-button account-submit" type="submit">Create demo account <ArrowRight size={17} aria-hidden="true" /></button>
@@ -1200,16 +1402,18 @@ function AccountDialog({
 export function NexusApp() {
   const [view, setView] = useState<View>("explore");
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(places[0]?.id ?? null);
-  const [user, setUser] = useLocalStorageState<UserProfile | null>("nexus-user", null);
-  const [savedPlaceIds, setSavedPlaceIds] = useLocalStorageState<string[]>("nexus-saved-places", []);
-  const [incidents, setIncidents] = useLocalStorageState<Incident[]>("nexus-incidents", initialIncidents);
-  const [submittedReports, setSubmittedReports] = useLocalStorageState<string[]>("nexus-submitted-reports", []);
-  const [confirmedIncidentIds, setConfirmedIncidentIds] = useLocalStorageState<string[]>("nexus-confirmed-incidents", []);
-  const [, setProviderListings] = useLocalStorageState<ListingForm[]>("nexus-provider-listings", []);
+  const [user, setUser] = useLocalStorageState<UserProfile | null>("nexus-user:v2", null);
+  const [savedPlaceIds, setSavedPlaceIds] = useLocalStorageState<string[]>("nexus-saved-places:v2", []);
+  const [incidents, setIncidents] = useLocalStorageState<Incident[]>("nexus-incidents:v2", initialIncidents);
+  const [submittedReports, setSubmittedReports] = useLocalStorageState<string[]>("nexus-submitted-reports:v2", []);
+  const [attestations, setAttestations] = useLocalStorageState<IncidentAttestation[]>("nexus-attestations:v2", []);
+  const [, setProviderListings] = useLocalStorageState<ListingForm[]>("nexus-provider-listings:v2", []);
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountReason, setAccountReason] = useState("");
+  const [attestationIncident, setAttestationIncident] = useState<Incident | null>(null);
   const [toast, setToast] = useState("");
-  const pendingAction = useRef<null | (() => void)>(null);
+  const pendingAction = useRef<PendingAction | null>(null);
+  const campusIncidents = incidents.filter((incident) => incident.campusId === NEXUS_CAMPUS_ID);
 
   useEffect(() => {
     if (!toast) return;
@@ -1217,23 +1421,41 @@ export function NexusApp() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const requireAccount = (reason: string, action: () => void) => {
+  const requireAccount = (reason: string, action: (profile: UserProfile) => void) => {
     if (user) {
-      action();
+      action(user);
       return;
     }
-    pendingAction.current = action;
+    pendingAction.current = { action, campusOnly: false };
     setAccountReason(reason);
     setAccountOpen(true);
+  };
+
+  const requireCampusMembership = (reason: string, action: (profile: UserProfile) => void) => {
+    if (!user) {
+      pendingAction.current = { action, campusOnly: true };
+      setAccountReason(reason);
+      setAccountOpen(true);
+      return;
+    }
+    if (!isNexusCampusMember(user.campusId)) {
+      setToast("Only LASU Epe campus members can take this action.");
+      return;
+    }
+    action(user);
   };
 
   const signIn = (profile: UserProfile) => {
     setUser(profile);
     setAccountOpen(false);
     setToast(`Welcome to Nexus, ${profile.name.split(" ")[0]}.`);
-    const action = pendingAction.current;
+    const pending = pendingAction.current;
     pendingAction.current = null;
-    window.setTimeout(() => action?.(), 0);
+    if (pending?.campusOnly && !isNexusCampusMember(profile.campusId)) {
+      setToast("Account created. LASU Epe community actions remain restricted to LASU Epe members.");
+      return;
+    }
+    window.setTimeout(() => pending?.action(profile), 0);
   };
 
   const toggleSavedPlace = (place: Place) => {
@@ -1251,13 +1473,43 @@ export function NexusApp() {
     setToast("Report submitted and saved on this device.");
   };
 
-  const confirmIncident = (id: string) => {
-    if (confirmedIncidentIds.includes(id)) return;
+  const requestAttestation = (incident: Incident) => {
+    requireCampusMembership("Sign in with a LASU Epe campus account to attest to this report.", (profile) => {
+      if (incident.reportedBy === profile.id) {
+        setToast("You cannot attest to your own report.");
+        return;
+      }
+      if (attestations.some((item) => item.incidentId === incident.id && item.userId === profile.id)) {
+        setToast("You have already attested to this report.");
+        return;
+      }
+      setAttestationIncident(incident);
+    });
+  };
+
+  const submitAttestation = (kind: AttestationKind) => {
+    if (!user || !attestationIncident || !isNexusCampusMember(user.campusId)) return;
+    const alreadyAttested = attestations.some((item) => item.incidentId === attestationIncident.id && item.userId === user.id);
+    if (alreadyAttested) {
+      setAttestationIncident(null);
+      setToast("You have already attested to this report.");
+      return;
+    }
+    setAttestations((current) => [...current, {
+      id: crypto.randomUUID(),
+      incidentId: attestationIncident.id,
+      userId: user.id,
+      campusId: user.campusId,
+      kind,
+      createdAt: new Date().toISOString(),
+    }]);
     setIncidents((current) => current.map((incident) => (
-      incident.id === id ? { ...incident, confirmations: incident.confirmations + 1 } : incident
+      incident.id === attestationIncident.id
+        ? { ...incident, confirmations: incident.confirmations + 1 }
+        : incident
     )));
-    setConfirmedIncidentIds((current) => [...current, id]);
-    setToast("Your confirmation was recorded.");
+    setAttestationIncident(null);
+    setToast("Your campus attestation was recorded.");
   };
 
   const updateIncidentStatus = (id: string, status: IncidentStatus) => {
@@ -1267,7 +1519,7 @@ export function NexusApp() {
     setToast(`Report status changed to ${status}.`);
   };
 
-  const openProvider = () => requireAccount("Sign in before creating a campus service listing.", () => setView("provider"));
+  const openProvider = () => requireCampusMembership("Sign in with a LASU Epe campus account before creating a campus service listing.", () => setView("provider"));
 
   const viewPlace = (place: Place) => {
     setSelectedPlaceId(place.id);
@@ -1293,15 +1545,16 @@ export function NexusApp() {
       {view === "services" ? <ServicesView onListService={openProvider} onViewPlace={viewPlace} /> : null}
       {view === "reports" ? (
         <ReportsView
-          incidents={incidents}
-          confirmedIncidentIds={confirmedIncidentIds}
+          incidents={campusIncidents}
+          user={user}
+          attestations={attestations}
           onAddIncident={addIncident}
-          onConfirmIncident={confirmIncident}
-          onRequestReport={(openForm) => requireAccount("Sign in before submitting a campus report.", openForm)}
+          onRequestAttestation={requestAttestation}
+          onRequestReport={(openForm) => requireCampusMembership("Sign in with a LASU Epe campus account before submitting a campus report.", () => openForm())}
         />
       ) : null}
       {view === "admin" ? (
-        <AdminView incidents={incidents} onStatusChange={updateIncidentStatus} />
+        <AdminView incidents={campusIncidents} onStatusChange={updateIncidentStatus} />
       ) : null}
       {view === "provider" ? (
         <ProviderView
@@ -1324,10 +1577,16 @@ export function NexusApp() {
             setUser(null);
             setSavedPlaceIds([]);
             setSubmittedReports([]);
-            setConfirmedIncidentIds([]);
             setAccountOpen(false);
             setToast("Signed out of the local Nexus account.");
           }}
+        />
+      ) : null}
+      {attestationIncident ? (
+        <AttestationDialog
+          incident={attestationIncident}
+          onClose={() => setAttestationIncident(null)}
+          onSubmit={submitAttestation}
         />
       ) : null}
       {toast ? <div className="toast" role="status" aria-live="polite"><CheckCircle2 size={17} aria-hidden="true" />{toast}</div> : null}

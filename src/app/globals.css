@@ -882,6 +882,128 @@ button {
   min-width: 112px;
 }
 
+.direction-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.direction-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.direction-heading h3 {
+  margin: 5px 0 0;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.direction-time {
+  display: inline-flex;
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.direction-panel > label {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.direction-panel > select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.direction-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.direction-summary svg {
+  flex: 0 0 auto;
+  color: var(--foreground);
+}
+
+.direction-summary strong {
+  color: var(--foreground);
+}
+
+.direction-steps {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  counter-reset: route-step;
+  list-style: none;
+}
+
+.direction-steps li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.45;
+  counter-increment: route-step;
+}
+
+.direction-steps li::before {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  content: counter(route-step);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.direction-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.direction-disclaimer svg {
+  flex: 0 0 auto;
+}
+
 .dialog-backdrop {
   position: fixed;
   z-index: 2000;
@@ -922,7 +1044,7 @@ button {
 .account-intro,
 .account-note {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -939,7 +1061,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface-soft);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.45;
 }
@@ -952,6 +1074,121 @@ button {
 .account-form {
   display: grid;
   gap: 15px;
+}
+
+.account-campus-fields {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.account-campus-fields legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.membership-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.membership-badge.eligible {
+  border-color: rgba(22, 114, 74, 0.28);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.membership-badge span {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.membership-badge strong {
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.attestation-dialog {
+  width: min(520px, 100%);
+}
+
+.attestation-incident {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.attestation-incident > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.attestation-incident strong {
+  font-size: 12px;
+}
+
+.attestation-incident small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.attestation-options {
+  display: grid;
+  gap: 8px;
+}
+
+.attestation-options button {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.attestation-options button:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.attestation-options button > span {
+  display: grid;
+  gap: 3px;
+}
+
+.attestation-options strong {
+  font-size: 12px;
+}
+
+.attestation-options small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .account-form .account-note {
@@ -2195,6 +2432,29 @@ button {
 .incident-form-card form {
   display: grid;
   gap: 16px;
+}
+
+.campus-boundary-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(22, 114, 74, 0.28);
+  border-radius: 9px;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.campus-boundary-note span {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.campus-boundary-note strong {
+  color: var(--foreground);
+  font-size: 12px;
 }
 
 .photo-field {

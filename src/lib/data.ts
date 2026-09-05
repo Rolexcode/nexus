@@ -32,6 +32,17 @@ export type IncidentCategory =
 
 export type IncidentStatus = "Reported" | "Verified" | "In progress" | "Resolved";
 
+export type AttestationKind = "still-happening" | "saw-it-too" | "looks-resolved";
+
+export type IncidentAttestation = {
+  id: string;
+  incidentId: string;
+  userId: string;
+  campusId: string;
+  kind: AttestationKind;
+  createdAt: string;
+};
+
 export type Incident = {
   id: string;
   title: string;
@@ -44,6 +55,8 @@ export type Incident = {
   severity: "Low" | "Medium" | "High";
   status: IncidentStatus;
   anonymous: boolean;
+  campusId: string;
+  reportedBy?: string;
   evidenceLabel?: string;
 };
 
@@ -92,6 +105,7 @@ export const initialIncidents: Incident[] = [
     severity: "High",
     status: "Verified",
     anonymous: true,
+    campusId: "lasu-epe",
     evidenceLabel: "1 photo attached",
   },
   {
@@ -106,6 +120,7 @@ export const initialIncidents: Incident[] = [
     severity: "High",
     status: "In progress",
     anonymous: true,
+    campusId: "lasu-epe",
   },
   {
     id: "incident-waste",
@@ -119,6 +134,7 @@ export const initialIncidents: Incident[] = [
     severity: "Medium",
     status: "Reported",
     anonymous: false,
+    campusId: "lasu-epe",
     evidenceLabel: "2 photos attached",
   },
   {
@@ -133,6 +149,7 @@ export const initialIncidents: Incident[] = [
     severity: "Medium",
     status: "Verified",
     anonymous: true,
+    campusId: "lasu-epe",
   },
   {
     id: "incident-snake",
@@ -146,5 +163,6 @@ export const initialIncidents: Incident[] = [
     severity: "High",
     status: "Resolved",
     anonymous: true,
+    campusId: "lasu-epe",
   },
 ];
