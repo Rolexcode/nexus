@@ -15,6 +15,7 @@ const actions = [
     title: "Find a place",
     copy: "Open the campus map and go straight to where you need to be.",
     icon: Navigation,
+    href: "/ui-preview/map",
   },
   {
     title: "Report a problem",
@@ -56,20 +57,27 @@ export default function UiPreviewPage() {
         <p>Start with one clear task. Nexus takes you straight to the right place instead of making you figure out the interface first.</p>
 
         <div className={styles.actions}>
-          {actions.map(({ title, copy, icon: Icon }) => (
-            <button type="button" className={styles.actionCard} key={title}>
-              <span className={styles.actionIcon}><Icon size={21} /></span>
-              <span className={styles.actionCopy}><strong>{title}</strong><small>{copy}</small></span>
-              <ArrowRight size={18} className={styles.arrow} />
-            </button>
-          ))}
+          {actions.map(({ title, copy, icon: Icon, href }) => {
+            const content = (
+              <>
+                <span className={styles.actionIcon}><Icon size={21} /></span>
+                <span className={styles.actionCopy}><strong>{title}</strong><small>{copy}</small></span>
+                <ArrowRight size={18} className={styles.arrow} />
+              </>
+            );
+            return href ? (
+              <Link href={href} className={styles.actionCard} key={title}>{content}</Link>
+            ) : (
+              <button type="button" className={styles.actionCard} key={title}>{content}</button>
+            );
+          })}
         </div>
       </section>
 
       <section className={styles.directory}>
         <div className={styles.sectionHeading}>
           <div><span>Campus directory</span><h2>Or browse nearby places</h2></div>
-          <button type="button" className={styles.mapButton}><Navigation size={16} /> Open full campus map</button>
+          <Link href="/ui-preview/map" className={styles.mapButton}><Navigation size={16} /> Open full campus map</Link>
         </div>
 
         <label className={styles.search}>
@@ -79,11 +87,11 @@ export default function UiPreviewPage() {
 
         <div className={styles.placeList}>
           {places.map(([name, meta]) => (
-            <button type="button" className={styles.place} key={name}>
+            <Link href="/ui-preview/map" className={styles.place} key={name}>
               <span className={styles.placePin}><MapPin size={18} /></span>
               <span><strong>{name}</strong><small>{meta}</small></span>
               <ArrowRight size={17} />
-            </button>
+            </Link>
           ))}
         </div>
       </section>
@@ -92,7 +100,7 @@ export default function UiPreviewPage() {
         <div>
           <span>Dedicated map screen</span>
           <h2>The map should feel like a destination, not another box on the home page.</h2>
-          <p>In the real flow, tapping “Find a place” or “Open full campus map” would take the user to a full-screen map with search, their location and directions.</p>
+          <p>Tap “Find a place” or “Open full campus map” to try the dedicated map screen with search, campus pins and directions from your live location.</p>
         </div>
         <div className={styles.fakeMap} aria-hidden="true">
           <span className={styles.you}>You are here</span>
