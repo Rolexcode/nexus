@@ -48,7 +48,6 @@ export function TaskFirstHome() {
           <span className={styles.mark}>N</span>
           <span><strong>Nexus</strong><small>LASU Epe</small></span>
         </Link>
-        <Link className={styles.workspaceLink} href="/campus">Open campus app</Link>
       </header>
 
       <section className={styles.hero}>
