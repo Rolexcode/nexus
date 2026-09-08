@@ -91,6 +91,59 @@
   background: #f0f0ec;
 }
 
+.suggestions {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(199,199,191,.96);
+  border-radius: 13px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 12px 30px rgba(23,23,21,.12);
+  backdrop-filter: blur(12px);
+}
+
+.suggestionLabel {
+  display: block;
+  margin: 0 2px 8px;
+  color: #696963;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.suggestionList {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  scrollbar-width: none;
+}
+
+.suggestionList::-webkit-scrollbar { display: none; }
+
+.suggestionList button {
+  display: inline-flex;
+  min-height: 36px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid #deded8;
+  border-radius: 999px;
+  background: #f6f6f3;
+  color: #171715;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.suggestionList button:hover {
+  border-color: #171715;
+  background: #fff;
+}
+
+.suggestionList button svg { color: #696963; }
+
 .results {
   display: grid;
   gap: 3px;
@@ -251,6 +304,8 @@
   .toolbar { top: 10px; left: 10px; padding-right: 10px; }
   .searchPanel { top: 62px; right: 10px; left: 10px; width: auto; transform: none; }
   .searchBox { min-height: 50px; }
+  .suggestions { padding: 9px; }
+  .suggestionList button { min-height: 34px; padding: 0 9px; }
   .destinationCard { right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 52vh; }
   .hint { right: 12px; bottom: 18px; left: 12px; justify-content: center; transform: none; }
 }
