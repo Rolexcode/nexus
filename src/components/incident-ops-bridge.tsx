@@ -2,13 +2,10 @@
 
 import { useEffect } from "react";
 import {
-  hasFirebaseAdminRole,
   readCaseEvidence,
   readCaseReporter,
   saveCaseEvidence,
   saveCaseReporter,
-  type CaseEvidence,
-  type CaseReporter,
 } from "@/lib/firebase-rest";
 import type { Incident } from "@/lib/data";
 
@@ -123,6 +120,15 @@ function addPhotoPreview(input: HTMLInputElement, evidence: PendingEvidence) {
   field.appendChild(wrap);
 }
 
+function cleanVisibleCopy() {
+  document.querySelectorAll<HTMLElement>("span, p, small, strong").forEach((node) => {
+    if (node.children.length) return;
+    const text = node.textContent ?? "";
+    if (text.includes("verified demo campus membership")) node.textContent = text.replace("verified demo campus membership", "verified campus account");
+    if (text.includes("This prototype saves the draft locally for demonstration.")) node.textContent = "Your listing is saved for campus review before publication.";
+  });
+}
+
 function setCameraCapture() {
   const input = document.querySelector<HTMLInputElement>("#incident-photo");
   if (!input) return;
@@ -177,7 +183,7 @@ async function renderAdminVerification() {
     display: "grid",
     gap: "12px",
   });
-  card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><small style="display:block;color:#696963;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:10px">Case verification</small><strong style="font-size:15px">Reporter & evidence</strong></div><span style="font-size:11px;font-weight:800;color:#16724a">SIGNED ACCOUNT</span></div><div data-state style="font-size:12px;color:#696963">Loading private case details…</div>`;
+  card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><small style="display:block;color:#696963;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:10px">Case verification</small><strong style="font-size:15px">Reporter & evidence</strong></div><span style="font-size:11px;font-weight:800;color:#16724a">ACCOUNT LINKED</span></div><div data-state style="font-size:12px;color:#696963">Loading private case details…</div>`;
   panel.appendChild(card);
 
   try {
@@ -185,8 +191,7 @@ async function renderAdminVerification() {
       readCaseReporter(selected.id),
       readCaseEvidence(selected.id),
     ]);
-    const state = card.querySelector<HTMLElement>("[data-state]");
-    state?.remove();
+    card.querySelector<HTMLElement>("[data-state]")?.remove();
 
     const grid = document.createElement("div");
     Object.assign(grid.style, { display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "10px" });
@@ -207,7 +212,7 @@ async function renderAdminVerification() {
     const checks = document.createElement("div");
     Object.assign(checks.style, { display: "grid", gap: "6px", fontSize: "12px" });
     const checkItems = [
-      reporter ? "✓ Reporter was signed in when the case was submitted" : "• No private reporter snapshot for this case",
+      reporter ? "✓ Submitted from a signed-in Nexus account" : "• No private reporter snapshot for this case",
       evidence ? "✓ Photo evidence attached" : "• No photo evidence attached",
       selected.confirmations > 1 ? `✓ ${selected.confirmations} community confirmations` : "• Awaiting independent community confirmation",
     ];
@@ -233,13 +238,47 @@ async function renderAdminVerification() {
   }
 }
 
+async function renderReporterEvidence() {
+  const panel = document.querySelector<HTMLElement>(".incident-details");
+  const title = panel?.querySelector("h2")?.textContent?.trim();
+  if (!panel || !title) return;
+  const incidents = readJson<Incident[]>(INCIDENTS_KEY) ?? [];
+  const selected = incidents.find((incident) => incident.title === title);
+  const profile = readJson<UserProfile>(USER_KEY);
+  if (!selected || !profile || selected.reportedBy !== profile.id) {
+    panel.querySelector(".nexus-own-evidence")?.remove();
+    return;
+  }
+  if (panel.querySelector(".nexus-own-evidence")) return;
+  try {
+    const evidence = await readCaseEvidence(selected.id);
+    if (!evidence) return;
+    const wrap = document.createElement("div");
+    wrap.className = "nexus-own-evidence";
+    Object.assign(wrap.style, { marginTop: "12px", display: "grid", gap: "6px" });
+    const label = document.createElement("small");
+    label.textContent = "Your attached evidence";
+    Object.assign(label.style, { fontWeight: "800", color: "#696963", textTransform: "uppercase", letterSpacing: ".07em" });
+    const img = document.createElement("img");
+    img.src = evidence.dataUrl;
+    img.alt = `Evidence for ${selected.title}`;
+    Object.assign(img.style, { width: "100%", maxHeight: "220px", objectFit: "cover", borderRadius: "10px", border: "1px solid #deded8" });
+    wrap.append(label, img);
+    panel.appendChild(wrap);
+  } catch {
+    // Evidence is intentionally private; ignore if this user cannot access it.
+  }
+}
+
 export function IncidentOpsBridge() {
   useEffect(() => {
     let beforeSubmitIds: string[] = [];
 
     const prepare = () => {
       setCameraCapture();
+      cleanVisibleCopy();
       void renderAdminVerification();
+      void renderReporterEvidence();
     };
 
     prepare();
