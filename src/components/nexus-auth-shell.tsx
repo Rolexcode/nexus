@@ -5,6 +5,7 @@ import { ArrowRight, LockKeyhole, LogOut, ShieldCheck, UserRound, X } from "luci
 import {
   createFirebaseAccount,
   getValidFirebaseSession,
+  hasFirebaseAdminRole,
   readFirebaseProfile,
   saveFirebaseProfile,
   signInFirebaseAccount,
@@ -28,17 +29,10 @@ type NexusProfile = {
 type Mode = "signin" | "signup";
 
 const USER_KEY = "nexus-user:v2";
-const ADMIN_EMAIL_HASH = "0a88744b7504ad9b171e96a518026bdf40b50aeb0b13aaf13dafc182d7a41b90";
 
 function writeLocalProfile(profile: NexusProfile | null) {
   if (profile) window.localStorage.setItem(USER_KEY, JSON.stringify(profile));
   else window.localStorage.removeItem(USER_KEY);
-}
-
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value.trim().toLowerCase());
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function buttonText(target: Element | null) {
@@ -56,6 +50,12 @@ function isProtectedAction(target: Element | null) {
 function isAccountAction(target: Element | null) {
   const button = target?.closest("button");
   if (!button) return false;
+
+  // Never intercept buttons inside our own Firebase account dialog.
+  // The old text-based listener caught the form's "Sign in" submit button
+  // before React could submit the form, which is why sign-up worked but sign-in did not.
+  if (button.closest(".account-dialog")) return false;
+
   if (button.classList.contains("account-button")) return true;
   const text = buttonText(target);
   return text === "sign in" || text === "my account";
@@ -108,9 +108,18 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
   const [level, setLevel] = useState("");
 
   const updateAdminState = async (nextProfile: NexusProfile | null) => {
-    const allowed = nextProfile ? await sha256(nextProfile.email) === ADMIN_EMAIL_HASH : false;
-    setIsAdmin(allowed);
-    return allowed;
+    if (!nextProfile) {
+      setIsAdmin(false);
+      return false;
+    }
+    try {
+      const allowed = await hasFirebaseAdminRole();
+      setIsAdmin(allowed);
+      return allowed;
+    } catch {
+      setIsAdmin(false);
+      return false;
+    }
   };
 
   const restoreAccount = async () => {
@@ -122,6 +131,7 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
       setAuthReady(true);
       return;
     }
+
     try {
       const cloudProfile = await readFirebaseProfile<NexusProfile>();
       if (cloudProfile) {
@@ -234,6 +244,7 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
@@ -290,6 +301,7 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
                   </span>
                 </div>
                 <div className="membership-badge eligible"><ShieldCheck size={16} /><span><strong>Campus account</strong>Signed in and ready for campus actions</span></div>
+                {isAdmin ? <div className="membership-badge eligible"><ShieldCheck size={16} /><span><strong>Administrator</strong>Campus moderation tools enabled</span></div> : null}
                 <p className="account-note">Reports and attestations are tied to this account. You can still choose to hide your name publicly when submitting a report.</p>
                 <button className="secondary-button sign-out-button" type="button" onClick={logOut}><LogOut size={17} /> Sign out</button>
               </>
@@ -337,7 +349,7 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
                   <div className="field-group"><label htmlFor="firebase-email">Email <span>*</span></label><input id="firebase-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div>
                   <div className="field-group"><label htmlFor="firebase-password">Password <span>*</span></label><input id="firebase-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} /></div>
                   <p className="account-note"><UserRound size={14} /> {mode === "signup" ? "Your password is handled securely by Firebase Authentication and is never stored by Nexus." : "Use the same email and password you used when creating your account."}</p>
-                  <button className="primary-button account-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"} <ArrowRight size={17} /></button>
+                  <button className="primary-button account-submit" type="submit" disabled={busy}>{busy ? "Signing in…" : mode === "signup" ? "Create account" : "Sign in"} <ArrowRight size={17} /></button>
                 </form>
               </>
             )}
