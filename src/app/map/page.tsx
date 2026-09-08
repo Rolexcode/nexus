@@ -14,6 +14,11 @@ const CampusMap = dynamic(
   { ssr: false },
 );
 
+const suggestedPlaceIds = ["engineering-hall", "admin-block", "main-gate", "campus-library", "health-centre"];
+const suggestedPlaces = suggestedPlaceIds
+  .map((id) => places.find((place) => place.id === id))
+  .filter((place): place is Place => Boolean(place));
+
 export default function CampusMapPage() {
   const searchParams = useSearchParams();
   const initialPlaceId = searchParams.get("place");
@@ -68,6 +73,20 @@ export default function CampusMapPage() {
           ) : null}
         </label>
 
+        {!query && !selectedPlace ? (
+          <div className={styles.suggestions} aria-label="Suggested campus destinations">
+            <span className={styles.suggestionLabel}>Popular destinations</span>
+            <div className={styles.suggestionList}>
+              {suggestedPlaces.map((place) => (
+                <button key={place.id} type="button" onClick={() => selectPlace(place)}>
+                  <MapPin size={14} />
+                  {place.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {query ? (
           <div className={styles.results}>
             {filteredPlaces.slice(0, 6).map((place) => (
@@ -84,7 +103,7 @@ export default function CampusMapPage() {
       {!selectedPlace ? (
         <div className={styles.hint}>
           <Navigation size={16} />
-          <span>Search above or tap a pin to choose a destination.</span>
+          <span>Choose a suggested destination, search, or tap a pin.</span>
         </div>
       ) : (
         <aside className={styles.destinationCard} aria-label={`${selectedPlace.name} destination`}>
