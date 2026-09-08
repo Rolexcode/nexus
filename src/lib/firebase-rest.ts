@@ -18,9 +18,33 @@ export type FirebaseSession = {
   expiresAt: number;
 };
 
+export type CaseEvidence = {
+  incidentId: string;
+  ownerId: string;
+  dataUrl: string;
+  fileName: string;
+  contentType: string;
+  createdAt: string;
+  source: "camera-or-upload";
+};
+
+export type CaseReporter = {
+  uid: string;
+  name: string;
+  email: string;
+  matricNumber: string;
+  institutionId: string;
+  campusId: string;
+  department: string;
+  level: string;
+  capturedAt: string;
+};
+
 type FirestoreDocument = {
   fields?: {
     json?: { stringValue?: string };
+    ownerId?: { stringValue?: string };
+    uid?: { stringValue?: string };
   };
 };
 
@@ -160,21 +184,22 @@ export async function getValidFirebaseSession() {
   return refreshSession(session);
 }
 
-function demoDocumentUrl(key: string) {
+function firestoreDocumentUrl(collection: string, documentId: string) {
   if (!FIREBASE_PROJECT_ID) throw new Error("Firebase project ID is missing.");
-  return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(FIREBASE_PROJECT_ID)}/databases/(default)/documents/nexus-demo/${encodeURIComponent(key)}`;
+  return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(FIREBASE_PROJECT_ID)}/databases/(default)/documents/${encodeURIComponent(collection)}/${encodeURIComponent(documentId)}`;
+}
+
+function demoDocumentUrl(key: string) {
+  return firestoreDocumentUrl("nexus-demo", key);
 }
 
 function profileDocumentUrl(uid: string) {
-  if (!FIREBASE_PROJECT_ID) throw new Error("Firebase project ID is missing.");
-  return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(FIREBASE_PROJECT_ID)}/databases/(default)/documents/nexus-users/${encodeURIComponent(uid)}`;
+  return firestoreDocumentUrl("nexus-users", uid);
 }
 
-export async function readFirebaseState<T>(key: string): Promise<T | null> {
-  if (!shouldSyncWithFirebase(key)) return null;
-  const session = await getValidFirebaseSession();
-  const response = await fetch(demoDocumentUrl(key), {
-    headers: session ? { Authorization: `Bearer ${session.idToken}` } : undefined,
+async function readJsonDocument<T>(url: string, idToken?: string): Promise<T | null> {
+  const response = await fetch(url, {
+    headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
     cache: "no-store",
   });
   if (response.status === 404) return null;
@@ -182,6 +207,12 @@ export async function readFirebaseState<T>(key: string): Promise<T | null> {
   const document = await response.json() as FirestoreDocument;
   const raw = document.fields?.json?.stringValue;
   return raw ? JSON.parse(raw) as T : null;
+}
+
+export async function readFirebaseState<T>(key: string): Promise<T | null> {
+  if (!shouldSyncWithFirebase(key)) return null;
+  const session = await getValidFirebaseSession();
+  return readJsonDocument<T>(demoDocumentUrl(key), session?.idToken);
 }
 
 export async function writeFirebaseState<T>(key: string, value: T) {
@@ -236,4 +267,82 @@ export async function readFirebaseProfile<T>(): Promise<T | null> {
   const document = await response.json() as FirestoreDocument;
   const raw = document.fields?.json?.stringValue;
   return raw ? JSON.parse(raw) as T : null;
+}
+
+export async function saveCaseEvidence(incidentId: string, evidence: Omit<CaseEvidence, "incidentId" | "ownerId" | "createdAt" | "source">) {
+  const session = await getValidFirebaseSession();
+  if (!session) throw new Error("Sign in before attaching case evidence.");
+  const payload: CaseEvidence = {
+    incidentId,
+    ownerId: session.localId,
+    dataUrl: evidence.dataUrl,
+    fileName: evidence.fileName,
+    contentType: evidence.contentType,
+    createdAt: new Date().toISOString(),
+    source: "camera-or-upload",
+  };
+  const response = await fetch(firestoreDocumentUrl("nexus-evidence", incidentId), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${session.idToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fields: {
+        ownerId: { stringValue: session.localId },
+        json: { stringValue: JSON.stringify(payload) },
+        updatedAt: { timestampValue: new Date().toISOString() },
+      },
+    }),
+  });
+  if (!response.ok) throw new Error(`Evidence save failed (${response.status}).`);
+  return payload;
+}
+
+export async function readCaseEvidence(incidentId: string): Promise<CaseEvidence | null> {
+  const session = await getValidFirebaseSession();
+  if (!session) return null;
+  return readJsonDocument<CaseEvidence>(firestoreDocumentUrl("nexus-evidence", incidentId), session.idToken);
+}
+
+export async function saveCaseReporter(incidentId: string, reporter: Omit<CaseReporter, "uid" | "capturedAt">) {
+  const session = await getValidFirebaseSession();
+  if (!session) throw new Error("Sign in before submitting a case.");
+  const payload: CaseReporter = {
+    ...reporter,
+    uid: session.localId,
+    capturedAt: new Date().toISOString(),
+  };
+  const response = await fetch(firestoreDocumentUrl("nexus-case-reporters", incidentId), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${session.idToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fields: {
+        uid: { stringValue: session.localId },
+        json: { stringValue: JSON.stringify(payload) },
+        updatedAt: { timestampValue: new Date().toISOString() },
+      },
+    }),
+  });
+  if (!response.ok) throw new Error(`Reporter record save failed (${response.status}).`);
+  return payload;
+}
+
+export async function readCaseReporter(incidentId: string): Promise<CaseReporter | null> {
+  const session = await getValidFirebaseSession();
+  if (!session) return null;
+  return readJsonDocument<CaseReporter>(firestoreDocumentUrl("nexus-case-reporters", incidentId), session.idToken);
+}
+
+export async function hasFirebaseAdminRole() {
+  const session = await getValidFirebaseSession();
+  if (!session) return false;
+  const response = await fetch(firestoreDocumentUrl("nexus-admins", session.localId), {
+    headers: { Authorization: `Bearer ${session.idToken}` },
+    cache: "no-store",
+  });
+  return response.ok;
 }
