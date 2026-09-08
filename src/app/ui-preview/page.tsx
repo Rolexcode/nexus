@@ -40,6 +40,8 @@ const places = [
   ["Engineering Hall", "Academic · 4 min from gate"],
 ];
 
+const linkStyle = { color: "inherit", textDecoration: "none" } as const;
+
 export default function UiPreviewPage() {
   return (
     <main className={styles.page}>
@@ -66,7 +68,7 @@ export default function UiPreviewPage() {
               </>
             );
             return href ? (
-              <Link href={href} className={styles.actionCard} key={title}>{content}</Link>
+              <Link href={href} className={styles.actionCard} style={linkStyle} key={title}>{content}</Link>
             ) : (
               <button type="button" className={styles.actionCard} key={title}>{content}</button>
             );
@@ -77,7 +79,7 @@ export default function UiPreviewPage() {
       <section className={styles.directory}>
         <div className={styles.sectionHeading}>
           <div><span>Campus directory</span><h2>Or browse nearby places</h2></div>
-          <Link href="/ui-preview/map" className={styles.mapButton}><Navigation size={16} /> Open full campus map</Link>
+          <Link href="/ui-preview/map" className={styles.mapButton} style={{ textDecoration: "none" }}><Navigation size={16} /> Open full campus map</Link>
         </div>
 
         <label className={styles.search}>
@@ -87,7 +89,7 @@ export default function UiPreviewPage() {
 
         <div className={styles.placeList}>
           {places.map(([name, meta]) => (
-            <Link href="/ui-preview/map" className={styles.place} key={name}>
+            <Link href="/ui-preview/map" className={styles.place} style={linkStyle} key={name}>
               <span className={styles.placePin}><MapPin size={18} /></span>
               <span><strong>{name}</strong><small>{meta}</small></span>
               <ArrowRight size={17} />
