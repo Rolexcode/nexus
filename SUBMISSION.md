@@ -29,20 +29,21 @@ The core loop is:
 
 - Searchable LASU Epe map
 - Service directory and provider listing flow
+- Firebase email/password accounts with campus profiles
 - Geotagged incident reports with optional photo evidence
-- Public anonymity with accountable campus identity
+- Public anonymity with accountable signed-in identity
 - Campus-restricted attestations
 - One attestation per account and no self-attestation
 - Reported → Verified → In progress → Resolved lifecycle
 - Admin incident metrics, heatmap and action panel
-- Optional Firebase-backed shared incidents and attestations
+- Firebase-backed shared incidents and attestations across devices
 
 ## Architecture
 
 - Next.js + React + TypeScript
 - Leaflet + React Leaflet
-- Browser local storage for offline/fallback prototype state
-- Firebase Anonymous Authentication + Cloud Firestore REST for optional shared demo state
+- Browser local storage as a resilience/fallback layer
+- Firebase Email/Password Authentication + Cloud Firestore REST for account identity and shared demo state
 - Production authorization model documented in `BACKEND.md`
 
 ## Why it stands out
@@ -56,7 +57,7 @@ The competition prototype intentionally excludes jobs, freelance marketplace fea
 ## Demo sequence
 
 1. Search a campus place/service.
-2. Create a LASU Epe demo account.
+2. Create a LASU Epe Nexus account with email/password.
 3. Submit a location-linked incident.
 4. Use a second account/device to attest to it.
 5. Open Admin View and show the heatmap + confirmation count.
