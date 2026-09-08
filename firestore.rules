@@ -1,11 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Hackathon prototype only: anonymous Firebase-authenticated clients may
-    // read/write the two shared demo-state documents used by Nexus.
+    // Shared hackathon demo state. Anyone may read incident/attestation state;
+    // writes require a signed-in Firebase account.
     match /nexus-demo/{documentId} {
-      allow read, write: if request.auth != null
-        && (documentId == 'nexus-incidents:v2' || documentId == 'nexus-attestations:v2');
+      allow read: if documentId == 'nexus-incidents:v2'
+        || documentId == 'nexus-attestations:v2';
+      allow write: if request.auth != null
+        && (documentId == 'nexus-incidents:v2'
+          || documentId == 'nexus-attestations:v2');
+    }
+
+    // Each signed-in user owns one campus profile document.
+    match /nexus-users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /{document=**} {
