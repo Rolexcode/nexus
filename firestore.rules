@@ -10,7 +10,6 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/nexus-admins/$(request.auth.uid));
     }
 
-    // Shared campus incident and attestation state.
     match /nexus-demo/{documentId} {
       allow read: if documentId == 'nexus-incidents:v2'
         || documentId == 'nexus-attestations:v2';
@@ -19,19 +18,15 @@ service cloud.firestore {
           || documentId == 'nexus-attestations:v2');
     }
 
-    // Each signed-in user owns one campus profile document.
     match /nexus-users/{userId} {
       allow read, write: if signedIn() && request.auth.uid == userId;
     }
 
-    // Admin membership is provisioned manually in Firebase Console.
-    // Clients may only read their own membership marker and cannot create one.
     match /nexus-admins/{userId} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow write: if false;
     }
 
-    // Photo evidence is private to the reporting account and authorised admins.
     match /nexus-evidence/{incidentId} {
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid;
@@ -43,7 +38,6 @@ service cloud.firestore {
         && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
-    // Private snapshot of the registered account behind each submitted case.
     match /nexus-case-reporters/{incidentId} {
       allow create: if signedIn()
         && request.resource.data.uid == request.auth.uid;
@@ -52,6 +46,39 @@ service cloud.firestore {
       allow update: if signedIn()
         && (resource.data.uid == request.auth.uid || isAdmin());
       allow delete: if isAdmin();
+    }
+
+    // Student/provider recommendations stay private until an administrator approves them.
+    match /nexus-service-submissions/{listingId} {
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow read: if signedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // Approved service listings are public and carry the verified badge.
+    match /nexus-services/{listingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Reviews are public. One document id is derived from listing + user, so one account has one review per listing.
+    match /nexus-reviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Events and announcements also pass through moderation before publication.
+    match /nexus-board-submissions/{postId} {
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow read: if signedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /nexus-board/{postId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     match /{document=**} {
