@@ -1,5 +1,10 @@
-import { NexusWorkspace } from "@/components/nexus-workspace";
+import { NexusAuthShell } from "@/components/nexus-auth-shell";
+import { UpdatesClient } from "./updates-client";
 
 export default function UpdatesPage() {
-  return <NexusWorkspace target="updates" />;
+  return (
+    <NexusAuthShell>
+      <UpdatesClient />
+    </NexusAuthShell>
+  );
 }
