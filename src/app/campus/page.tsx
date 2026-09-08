@@ -1,5 +1,5 @@
-import { NexusWorkspace } from "@/components/nexus-workspace";
+import { redirect } from "next/navigation";
 
 export default function CampusWorkspacePage() {
-  return <NexusWorkspace />;
+  redirect("/");
 }
