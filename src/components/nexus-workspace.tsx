@@ -36,6 +36,27 @@ function InitialViewBridge({ target }: { target: WorkspaceTarget }) {
   return null;
 }
 
+function HomeNavigationGuard() {
+  useEffect(() => {
+    const goHome = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const button = target?.closest<HTMLButtonElement>("button");
+      if (!button) return;
+      const label = button.textContent?.trim();
+      if (!button.classList.contains("brand-button") && label !== "Explore campus") return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.location.assign("/");
+    };
+
+    document.addEventListener("click", goHome, true);
+    return () => document.removeEventListener("click", goHome, true);
+  }, []);
+
+  return null;
+}
+
 export function NexusWorkspace({ target = null }: { target?: WorkspaceTarget }) {
   return (
     <NexusAuthShell>
@@ -43,6 +64,7 @@ export function NexusWorkspace({ target = null }: { target?: WorkspaceTarget }) 
       <IncidentOpsBridge />
       <CommunityHubBridge />
       <InitialViewBridge target={target} />
+      <HomeNavigationGuard />
     </NexusAuthShell>
   );
 }
