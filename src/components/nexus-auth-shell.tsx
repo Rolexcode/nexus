@@ -1,0 +1,234 @@
+"use client";
+
+import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { ArrowRight, LockKeyhole, LogOut, ShieldCheck, UserRound, X } from "lucide-react";
+import {
+  createFirebaseAccount,
+  getValidFirebaseSession,
+  readFirebaseProfile,
+  saveFirebaseProfile,
+  signInFirebaseAccount,
+  signOutFirebaseAccount,
+  subscribeToFirebaseAuth,
+} from "@/lib/firebase-rest";
+
+type NexusProfile = {
+  id: string;
+  name: string;
+  email: string;
+  matricNumber: string;
+  institutionId: "lasu";
+  campusId: "lasu-epe";
+  department: string;
+  level: string;
+  membershipStatus: "demo-verified";
+};
+
+type Mode = "signin" | "signup";
+
+const USER_KEY = "nexus-user:v2";
+
+function writeLocalProfile(profile: NexusProfile | null) {
+  if (profile) window.localStorage.setItem(USER_KEY, JSON.stringify(profile));
+  else window.localStorage.removeItem(USER_KEY);
+}
+
+function isProtectedAction(target: Element | null) {
+  const button = target?.closest("button");
+  if (!button) return false;
+  const text = button.textContent?.trim().toLowerCase() ?? "";
+  return text.includes("report an issue")
+    || text === "attest"
+    || text.includes("add your service")
+    || text.includes("list a service");
+}
+
+function isAccountAction(target: Element | null) {
+  const button = target?.closest("button");
+  if (!button) return false;
+  if (button.classList.contains("account-button")) return true;
+  const text = button.textContent?.trim().toLowerCase() ?? "";
+  return text === "sign in" || text === "my account";
+}
+
+export function NexusAuthShell({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>("signin");
+  const [profile, setProfile] = useState<NexusProfile | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [matricNumber, setMatricNumber] = useState("");
+  const [department, setDepartment] = useState("");
+  const [level, setLevel] = useState("");
+
+  const restoreAccount = async () => {
+    const session = await getValidFirebaseSession();
+    if (!session) {
+      writeLocalProfile(null);
+      setProfile(null);
+      setAuthReady(true);
+      return;
+    }
+    try {
+      const cloudProfile = await readFirebaseProfile<NexusProfile>();
+      if (cloudProfile) {
+        writeLocalProfile(cloudProfile);
+        setProfile(cloudProfile);
+      } else {
+        const raw = window.localStorage.getItem(USER_KEY);
+        const local = raw ? JSON.parse(raw) as NexusProfile : null;
+        if (local?.id === session.localId) setProfile(local);
+      }
+    } catch (restoreError) {
+      console.warn("Nexus account profile could not be restored.", restoreError);
+    } finally {
+      setAuthReady(true);
+    }
+  };
+
+  useEffect(() => {
+    void restoreAccount();
+    return subscribeToFirebaseAuth(() => { void restoreAccount(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const intercept = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (isAccountAction(target)) {
+        event.preventDefault();
+        event.stopPropagation();
+        setError("");
+        setOpen(true);
+        return;
+      }
+      if (!profile && isProtectedAction(target)) {
+        event.preventDefault();
+        event.stopPropagation();
+        setError("Create or sign in to your Nexus account before taking this campus action.");
+        setOpen(true);
+      }
+    };
+    document.addEventListener("click", intercept, true);
+    return () => document.removeEventListener("click", intercept, true);
+  }, [profile]);
+
+  const signUp = async () => {
+    if (!name.trim()) throw new Error("Enter your full name.");
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error("Enter a valid email address.");
+    if (password.length < 6) throw new Error("Use a password with at least 6 characters.");
+    if (!matricNumber.trim()) throw new Error("Enter your matric number.");
+
+    const session = await createFirebaseAccount(email, password);
+    const nextProfile: NexusProfile = {
+      id: session.localId,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      matricNumber: matricNumber.trim().toUpperCase(),
+      institutionId: "lasu",
+      campusId: "lasu-epe",
+      department: department.trim(),
+      level,
+      membershipStatus: "demo-verified",
+    };
+    await saveFirebaseProfile(nextProfile);
+    writeLocalProfile(nextProfile);
+    setProfile(nextProfile);
+  };
+
+  const signIn = async () => {
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error("Enter your email address.");
+    if (!password) throw new Error("Enter your password.");
+    const session = await signInFirebaseAccount(email, password);
+    const cloudProfile = await readFirebaseProfile<NexusProfile>();
+    if (!cloudProfile) {
+      signOutFirebaseAccount();
+      throw new Error("This account does not have a Nexus campus profile yet. Create an account first.");
+    }
+    if (cloudProfile.id !== session.localId) throw new Error("The saved campus profile does not match this account.");
+    writeLocalProfile(cloudProfile);
+    setProfile(cloudProfile);
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      if (mode === "signup") await signUp();
+      else await signIn();
+      setOpen(false);
+      window.location.reload();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Could not complete sign in.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logOut = () => {
+    signOutFirebaseAccount();
+    writeLocalProfile(null);
+    setProfile(null);
+    setOpen(false);
+    window.location.reload();
+  };
+
+  return (
+    <>
+      {children}
+      {!authReady ? null : open ? (
+        <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setOpen(false);
+        }}>
+          <section className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="firebase-account-heading">
+            <div className="account-dialog-heading">
+              <div>
+                <span className="eyebrow">Nexus account</span>
+                <h2 id="firebase-account-heading">{profile ? `Welcome, ${profile.name.split(" ")[0]}` : mode === "signup" ? "Create your campus account" : "Sign in to Nexus"}</h2>
+              </div>
+              <button className="icon-button" type="button" onClick={() => setOpen(false)} aria-label="Close account dialog"><X size={18} /></button>
+            </div>
+
+            {profile ? (
+              <>
+                <div className="account-profile">
+                  <span className="account-avatar" aria-hidden="true">{profile.name.charAt(0).toUpperCase()}</span>
+                  <span><strong>{profile.name}</strong><small>{profile.matricNumber} · {profile.email}</small><small>LASU · Epe Campus</small></span>
+                </div>
+                <div className="membership-badge eligible"><ShieldCheck size={16} /><span><strong>Signed-in campus account</strong>Eligible for LASU Epe reports and attestations</span></div>
+                <p className="account-note">Your Firebase account provides the identity behind reports and attestations. Public anonymity can still be selected when submitting a report.</p>
+                <button className="secondary-button sign-out-button" type="button" onClick={logOut}><LogOut size={17} /> Sign out</button>
+              </>
+            ) : (
+              <>
+                {error ? <div className="account-reason"><LockKeyhole size={17} /><span>{error}</span></div> : null}
+                <div className="account-mode-switch" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <button className={mode === "signin" ? "primary-button" : "secondary-button"} type="button" onClick={() => { setMode("signin"); setError(""); }}>Sign in</button>
+                  <button className={mode === "signup" ? "primary-button" : "secondary-button"} type="button" onClick={() => { setMode("signup"); setError(""); }}>Create account</button>
+                </div>
+                <form className="account-form" onSubmit={submit}>
+                  {mode === "signup" ? (
+                    <>
+                      <div className="field-group"><label htmlFor="firebase-name">Full name <span>*</span></label><input id="firebase-name" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></div>
+                      <fieldset className="account-campus-fields"><legend>Campus membership</legend><div className="field-group"><label>Institution</label><input value="Lagos State University (LASU)" readOnly /></div><div className="field-group"><label>Campus</label><input value="Epe Campus" readOnly /></div><div className="field-group"><label htmlFor="firebase-matric">Matric number <span>*</span></label><input id="firebase-matric" value={matricNumber} onChange={(event) => setMatricNumber(event.target.value)} /></div></fieldset>
+                      <div className="form-row"><div className="field-group"><label htmlFor="firebase-department">Department <span className="optional">Optional</span></label><input id="firebase-department" value={department} onChange={(event) => setDepartment(event.target.value)} /></div><div className="field-group"><label htmlFor="firebase-level">Level <span className="optional">Optional</span></label><select id="firebase-level" value={level} onChange={(event) => setLevel(event.target.value)}><option value="">Select level</option><option value="100">100 level</option><option value="200">200 level</option><option value="300">300 level</option><option value="400">400 level</option><option value="500">500 level</option><option value="postgraduate">Postgraduate</option></select></div></div>
+                    </>
+                  ) : null}
+                  <div className="field-group"><label htmlFor="firebase-email">Email <span>*</span></label><input id="firebase-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div>
+                  <div className="field-group"><label htmlFor="firebase-password">Password <span>*</span></label><input id="firebase-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} /></div>
+                  <p className="account-note"><UserRound size={14} /> {mode === "signup" ? "Your password is handled by Firebase Authentication and is never stored by Nexus." : "Reports and attestations are tied to this signed-in account."}</p>
+                  <button className="primary-button account-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signup" ? "Create Nexus account" : "Sign in"} <ArrowRight size={17} /></button>
+                </form>
+              </>
+            )}
+          </section>
+        </div>
+      ) : null}
+    </>
+  );
+}
