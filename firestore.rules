@@ -1,19 +1,57 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Shared hackathon demo state. Anyone may read incident/attestation state;
-    // writes require a signed-in Firebase account.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/nexus-admins/$(request.auth.uid));
+    }
+
+    // Shared campus incident and attestation state.
     match /nexus-demo/{documentId} {
       allow read: if documentId == 'nexus-incidents:v2'
         || documentId == 'nexus-attestations:v2';
-      allow write: if request.auth != null
+      allow write: if signedIn()
         && (documentId == 'nexus-incidents:v2'
           || documentId == 'nexus-attestations:v2');
     }
 
     // Each signed-in user owns one campus profile document.
     match /nexus-users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Admin membership is provisioned manually in Firebase Console.
+    // Clients may only read their own membership marker and cannot create one.
+    match /nexus-admins/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Photo evidence is private to the reporting account and authorised admins.
+    match /nexus-evidence/{incidentId} {
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow read: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow update: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow delete: if signedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    // Private snapshot of the registered account behind each submitted case.
+    match /nexus-case-reporters/{incidentId} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid;
+      allow read: if signedIn()
+        && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if signedIn()
+        && (resource.data.uid == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /{document=**} {
