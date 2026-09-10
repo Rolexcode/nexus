@@ -6,12 +6,13 @@ import { NexusAuthShell } from "@/components/nexus-auth-shell";
 import { IncidentOpsBridge } from "@/components/incident-ops-bridge";
 import { CommunityHubBridge } from "@/components/community-hub-bridge";
 
-type WorkspaceTarget = "services" | "reports" | "updates" | null;
+type WorkspaceTarget = "services" | "reports" | "updates" | "admin" | null;
 
 const targetLabels: Record<Exclude<WorkspaceTarget, null>, string> = {
   services: "Services",
   reports: "Report & track",
   updates: "Campus board",
+  admin: "Admin view",
 };
 
 function InitialViewBridge({ target }: { target: WorkspaceTarget }) {
@@ -57,14 +58,22 @@ function HomeNavigationGuard() {
   return null;
 }
 
-export function NexusWorkspace({ target = null }: { target?: WorkspaceTarget }) {
+export function NexusWorkspaceCore({ target = null }: { target?: WorkspaceTarget }) {
   return (
-    <NexusAuthShell>
+    <>
       <NexusApp />
       <IncidentOpsBridge />
       <CommunityHubBridge />
       <InitialViewBridge target={target} />
       <HomeNavigationGuard />
+    </>
+  );
+}
+
+export function NexusWorkspace({ target = null }: { target?: WorkspaceTarget }) {
+  return (
+    <NexusAuthShell>
+      <NexusWorkspaceCore target={target} />
     </NexusAuthShell>
   );
 }
