@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Menu, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { hasFirebaseAdminRole, subscribeToFirebaseAuth } from "@/lib/firebase-rest";
@@ -33,14 +32,14 @@ export function NexusSiteHeader() {
 
   return (
     <header className={styles.header}>
-      <Link href="/" className={styles.brand} aria-label="Nexus home" onClick={() => setMenuOpen(false)}>
+      <a href="/" className={styles.brand} aria-label="Nexus home">
         <span className={styles.mark}>N</span>
         <span><strong>Nexus</strong><small>LASU Epe</small></span>
-      </Link>
+      </a>
 
       <nav className={styles.desktopNav} aria-label="Primary navigation">
-        {mainLinks.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
-        {isAdmin ? <Link href="/admin" className={styles.adminLink}>Admin</Link> : null}
+        {mainLinks.map(([label, href]) => <a href={href} key={href}>{label}</a>)}
+        {isAdmin ? <a href="/admin" className={styles.adminLink}>Admin</a> : null}
       </nav>
 
       <div className={styles.actions}>
@@ -61,11 +60,9 @@ export function NexusSiteHeader() {
 
       {menuOpen ? (
         <nav className={styles.mobileMenu} aria-label="Mobile navigation">
-          {mainLinks.map(([label, href]) => (
-            <Link href={href} key={href} onClick={() => setMenuOpen(false)}>{label}</Link>
-          ))}
-          {isAdmin ? <Link href="/admin" className={styles.mobileAdmin} onClick={() => setMenuOpen(false)}>Admin dashboard</Link> : null}
-          <button type="button" className="account-button" onClick={() => setMenuOpen(false)}>My account</button>
+          {mainLinks.map(([label, href]) => <a href={href} key={href}>{label}</a>)}
+          {isAdmin ? <a href="/admin" className={styles.mobileAdmin}>Admin dashboard</a> : null}
+          <button type="button" className="account-button">My account</button>
         </nav>
       ) : null}
     </header>
