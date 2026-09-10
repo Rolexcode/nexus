@@ -32,6 +32,12 @@ export type IncidentCategory =
 
 export type IncidentStatus = "Reported" | "Verified" | "In progress" | "Resolved";
 
+export type IncidentStatusEvent = {
+  status: IncidentStatus;
+  at: string;
+  by: "student" | "admin";
+};
+
 export type AttestationKind = "still-happening" | "saw-it-too" | "looks-resolved";
 
 export type IncidentAttestation = {
@@ -51,9 +57,11 @@ export type Incident = {
   coordinates: [number, number];
   landmark: string;
   reportedAt: string;
+  createdAt?: string;
   confirmations: number;
   severity: "Low" | "Medium" | "High";
   status: IncidentStatus;
+  statusHistory?: IncidentStatusEvent[];
   anonymous: boolean;
   campusId: string;
   reportedBy?: string;
