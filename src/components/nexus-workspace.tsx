@@ -15,6 +15,13 @@ const targetLabels: Record<Exclude<WorkspaceTarget, null>, string> = {
   admin: "Admin view",
 };
 
+function targetIsVisible(target: Exclude<WorkspaceTarget, null>) {
+  if (target === "admin") return Boolean(document.querySelector(".admin-page"));
+  if (target === "reports") return Boolean(document.querySelector(".incident-page"));
+  if (target === "services") return Boolean(document.querySelector(".services-section"));
+  return false;
+}
+
 function InitialViewBridge({ target }: { target: WorkspaceTarget }) {
   useEffect(() => {
     if (!target) return;
@@ -22,15 +29,18 @@ function InitialViewBridge({ target }: { target: WorkspaceTarget }) {
     let attempts = 0;
     const timer = window.setInterval(() => {
       attempts += 1;
+
+      if (targetIsVisible(target)) {
+        window.clearInterval(timer);
+        return;
+      }
+
       const button = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
         .find((item) => item.textContent?.trim() === label);
-      if (button) {
-        button.click();
-        window.clearInterval(timer);
-      } else if (attempts >= 30) {
-        window.clearInterval(timer);
-      }
-    }, 100);
+      button?.click();
+
+      if (attempts >= 40) window.clearInterval(timer);
+    }, 150);
     return () => window.clearInterval(timer);
   }, [target]);
 
