@@ -9,6 +9,7 @@ import {
   Store,
 } from "lucide-react";
 import { lasuEpePlaces as places } from "@/data/lasu-epe";
+import { NexusSiteHeader } from "@/components/nexus-site-header";
 import styles from "./task-first-home.module.css";
 
 const actions = [
@@ -43,12 +44,7 @@ const featuredPlaces = places.filter((place) => ["main-gate", "new-cbt-centre", 
 export function TaskFirstHome() {
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="Nexus home">
-          <span className={styles.mark}>N</span>
-          <span><strong>Nexus</strong><small>LASU Epe</small></span>
-        </Link>
-      </header>
+      <NexusSiteHeader />
 
       <section className={styles.hero}>
         <span className={styles.kicker}><MapPin size={15} /> LASU Epe Campus</span>
