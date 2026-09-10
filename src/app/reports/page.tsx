@@ -5,6 +5,9 @@ import { NexusSiteHeader } from "@/components/nexus-site-header";
 import { ReportsClient } from "./reports-client";
 import styles from "./reports.module.css";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const steps = [
   ["1", "Report goes live", "Other students can see it immediately."],
   ["2", "Community confirms", "Students can attest or say it looks resolved."],
@@ -15,7 +18,7 @@ const steps = [
 export default function ReportsPage() {
   return (
     <NexusAuthShell>
-      <div className={styles.route}>
+      <div className={styles.route} data-nexus-ui="reports-v3">
         <NexusSiteHeader />
 
         <main className={styles.shell}>
@@ -49,7 +52,7 @@ export default function ReportsPage() {
             <ReportsClient />
           </section>
 
-          <div className={styles.footerNote}><CheckCircle2 size={15} /> The map now stays on the dedicated Map page. Reports focus only on cases and evidence.</div>
+          <div className={styles.footerNote}><CheckCircle2 size={15} /> Map and navigation live only on the dedicated Map page. Reports stay focused on cases, evidence and status.</div>
         </main>
       </div>
     </NexusAuthShell>
