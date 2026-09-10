@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Radio, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Radio, ShieldCheck } from "lucide-react";
 import { NexusWorkspace } from "@/components/nexus-workspace";
+import { NexusSiteHeader } from "@/components/nexus-site-header";
 import styles from "./reports.module.css";
 
 const steps = [
@@ -13,15 +14,7 @@ const steps = [
 export default function ReportsPage() {
   return (
     <div className={styles.route}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="Back to Nexus home">
-          <span className={styles.mark}>N</span>
-          <span><strong>Nexus</strong><small>LASU Epe</small></span>
-        </Link>
-        <button type="button" className={styles.accountButton}>
-          <UserRound size={17} /> My account
-        </button>
-      </header>
+      <NexusSiteHeader />
 
       <main className={styles.shell}>
         <Link href="/" className={styles.back}><ArrowLeft size={16} /> Home</Link>
