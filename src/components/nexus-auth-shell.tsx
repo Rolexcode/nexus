@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
-import { ArrowRight, LockKeyhole, LogOut, ShieldCheck, UserRound, X } from "lucide-react";
+import { LockKeyhole, LogOut, ShieldCheck, UserRound, X } from "lucide-react";
 import {
   createFirebaseAccount,
   getValidFirebaseSession,
@@ -27,66 +27,11 @@ type NexusProfile = {
 };
 
 type Mode = "signin" | "signup";
-
 const USER_KEY = "nexus-user:v2";
 
 function writeLocalProfile(profile: NexusProfile | null) {
   if (profile) window.localStorage.setItem(USER_KEY, JSON.stringify(profile));
   else window.localStorage.removeItem(USER_KEY);
-}
-
-function buttonText(target: Element | null) {
-  return target?.closest("button")?.textContent?.trim().toLowerCase() ?? "";
-}
-
-function isProtectedAction(target: Element | null) {
-  const text = buttonText(target);
-  return text.includes("report an issue")
-    || text === "attest"
-    || text.includes("add your service")
-    || text.includes("list a service");
-}
-
-function isAccountAction(target: Element | null) {
-  const button = target?.closest("button");
-  if (!button) return false;
-
-  // Never intercept buttons inside our own Firebase account dialog.
-  // The old text-based listener caught the form's "Sign in" submit button
-  // before React could submit the form, which is why sign-up worked but sign-in did not.
-  if (button.closest(".account-dialog")) return false;
-
-  if (button.classList.contains("account-button")) return true;
-  const text = buttonText(target);
-  return text === "sign in" || text === "my account";
-}
-
-function isAdminAction(target: Element | null) {
-  return buttonText(target) === "admin view";
-}
-
-function removePrototypeChrome(isAdmin: boolean) {
-  document.querySelectorAll<HTMLElement>(".beta-badge, .demo-label, .data-note").forEach((node) => {
-    node.style.display = "none";
-  });
-
-  document.querySelectorAll<HTMLElement>("button").forEach((button) => {
-    const text = button.textContent?.trim().toLowerCase() ?? "";
-    if (text === "admin view") button.style.display = isAdmin ? "" : "none";
-  });
-
-  document.querySelectorAll<HTMLElement>("#account-heading").forEach((heading) => {
-    const legacyDialog = heading.closest<HTMLElement>(".dialog-backdrop");
-    if (legacyDialog) legacyDialog.style.display = "none";
-  });
-
-  document.querySelectorAll<HTMLElement>("small, p, span").forEach((node) => {
-    if (node.children.length) return;
-    const text = node.textContent ?? "";
-    if (text.includes("Current demo period")) node.textContent = text.replace("Current demo period", "Current reporting period");
-    if (text.includes("Live prototype")) node.textContent = text.replace("Live prototype", "Live overview");
-    if (text.includes("Campus operations · prototype")) node.textContent = text.replace("Campus operations · prototype", "Campus operations");
-  });
 }
 
 export function NexusAuthShell({ children }: { children: ReactNode }) {
@@ -110,41 +55,38 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
   const updateAdminState = async (nextProfile: NexusProfile | null) => {
     if (!nextProfile) {
       setIsAdmin(false);
-      return false;
+      return;
     }
     try {
-      const allowed = await hasFirebaseAdminRole();
-      setIsAdmin(allowed);
-      return allowed;
+      setIsAdmin(await hasFirebaseAdminRole());
     } catch {
       setIsAdmin(false);
-      return false;
     }
   };
 
   const restoreAccount = async () => {
-    const session = await getValidFirebaseSession();
-    if (!session) {
-      writeLocalProfile(null);
-      setProfile(null);
-      await updateAdminState(null);
-      setAuthReady(true);
-      return;
-    }
-
     try {
+      const session = await getValidFirebaseSession();
+      if (!session) {
+        writeLocalProfile(null);
+        setProfile(null);
+        await updateAdminState(null);
+        return;
+      }
+
       const cloudProfile = await readFirebaseProfile<NexusProfile>();
       if (cloudProfile) {
         writeLocalProfile(cloudProfile);
         setProfile(cloudProfile);
         await updateAdminState(cloudProfile);
-      } else {
-        const raw = window.localStorage.getItem(USER_KEY);
-        const local = raw ? JSON.parse(raw) as NexusProfile : null;
-        if (local?.id === session.localId) {
-          setProfile(local);
-          await updateAdminState(local);
-        }
+        return;
+      }
+
+      const raw = window.localStorage.getItem(USER_KEY);
+      const local = raw ? JSON.parse(raw) as NexusProfile : null;
+      if (local?.id === session.localId) {
+        setProfile(local);
+        await updateAdminState(local);
       }
     } catch (restoreError) {
       console.warn("Nexus account profile could not be restored.", restoreError);
@@ -160,42 +102,17 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    removePrototypeChrome(isAdmin);
-    const observer = new MutationObserver(() => removePrototypeChrome(isAdmin));
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [isAdmin]);
-
-  useEffect(() => {
-    const intercept = (event: MouseEvent) => {
+    const openAccount = (event: MouseEvent) => {
       const target = event.target as Element | null;
-
-      if (isAdminAction(target) && !isAdmin) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setError("Admin access is restricted.");
-        return;
-      }
-
-      if (isAccountAction(target)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setError("");
-        setOpen(true);
-        return;
-      }
-
-      if (!profile && isProtectedAction(target)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setError("Create or sign in to your Nexus account before taking this campus action.");
-        setOpen(true);
-      }
+      const button = target?.closest<HTMLButtonElement>("button.account-button");
+      if (!button || button.closest(".account-dialog")) return;
+      event.preventDefault();
+      setError("");
+      setOpen(true);
     };
-
-    document.addEventListener("click", intercept, true);
-    return () => document.removeEventListener("click", intercept, true);
-  }, [isAdmin, profile]);
+    document.addEventListener("click", openAccount);
+    return () => document.removeEventListener("click", openAccount);
+  }, []);
 
   const signUp = async () => {
     if (!name.trim()) throw new Error("Enter your full name.");
@@ -228,15 +145,10 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
 
     const session = await signInFirebaseAccount(email, password);
     const cloudProfile = await readFirebaseProfile<NexusProfile>();
-    if (!cloudProfile) {
+    if (!cloudProfile || cloudProfile.id !== session.localId) {
       signOutFirebaseAccount();
-      throw new Error("No Nexus profile was found for this account.");
+      throw new Error("No matching Nexus profile was found for this account.");
     }
-    if (cloudProfile.id !== session.localId) {
-      signOutFirebaseAccount();
-      throw new Error("This campus profile does not match the signed-in account.");
-    }
-
     writeLocalProfile(cloudProfile);
     setProfile(cloudProfile);
     await updateAdminState(cloudProfile);
@@ -277,10 +189,8 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      {!authReady ? null : open ? (
-        <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setOpen(false);
-        }}>
+      {authReady && open ? (
+        <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
           <section className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="firebase-account-heading">
             <div className="account-dialog-heading">
               <div>
@@ -312,44 +222,26 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
                   <button className={mode === "signin" ? "primary-button" : "secondary-button"} type="button" onClick={() => switchMode("signin")}>Sign in</button>
                   <button className={mode === "signup" ? "primary-button" : "secondary-button"} type="button" onClick={() => switchMode("signup")}>Create account</button>
                 </div>
-
                 <form className="account-form" onSubmit={submit}>
                   {mode === "signup" ? (
                     <>
                       <div className="field-group"><label htmlFor="firebase-name">Full name <span>*</span></label><input id="firebase-name" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></div>
-
                       <fieldset className="account-campus-fields">
                         <legend>Campus membership</legend>
-                        <div className="field-group">
-                          <label htmlFor="firebase-institution">Institution <span>*</span></label>
-                          <select id="firebase-institution" value={institutionId} onChange={(event) => {
-                            const nextInstitution = getInstitution(event.target.value) ?? institutions[0];
-                            setInstitutionId(nextInstitution.id);
-                            setCampusId(nextInstitution.campuses[0]?.id ?? "");
-                          }}>
-                            {institutions.map((institution) => <option value={institution.id} key={institution.id}>{institution.name}</option>)}
-                          </select>
-                        </div>
-                        <div className="field-group">
-                          <label htmlFor="firebase-campus">Campus <span>*</span></label>
-                          <select id="firebase-campus" value={campusId} onChange={(event) => setCampusId(event.target.value)}>
-                            {selectedInstitution.campuses.map((campus) => <option value={campus.id} key={campus.id}>{campus.name}</option>)}
-                          </select>
-                        </div>
+                        <div className="field-group"><label htmlFor="firebase-institution">Institution <span>*</span></label><select id="firebase-institution" value={institutionId} onChange={(event) => { const next = getInstitution(event.target.value) ?? institutions[0]; setInstitutionId(next.id); setCampusId(next.campuses[0]?.id ?? ""); }}>{institutions.map((institution) => <option value={institution.id} key={institution.id}>{institution.name}</option>)}</select></div>
+                        <div className="field-group"><label htmlFor="firebase-campus">Campus <span>*</span></label><select id="firebase-campus" value={campusId} onChange={(event) => setCampusId(event.target.value)}>{selectedInstitution.campuses.map((campus) => <option value={campus.id} key={campus.id}>{campus.name}</option>)}</select></div>
                         <div className="field-group"><label htmlFor="firebase-matric">Matric number <span>*</span></label><input id="firebase-matric" value={matricNumber} onChange={(event) => setMatricNumber(event.target.value)} autoComplete="off" /></div>
                       </fieldset>
-
                       <div className="form-row">
                         <div className="field-group"><label htmlFor="firebase-department">Department <span className="optional">Optional</span></label><input id="firebase-department" value={department} onChange={(event) => setDepartment(event.target.value)} /></div>
                         <div className="field-group"><label htmlFor="firebase-level">Level <span className="optional">Optional</span></label><select id="firebase-level" value={level} onChange={(event) => setLevel(event.target.value)}><option value="">Select level</option><option value="100">100 level</option><option value="200">200 level</option><option value="300">300 level</option><option value="400">400 level</option><option value="500">500 level</option><option value="postgraduate">Postgraduate</option></select></div>
                       </div>
                     </>
                   ) : null}
-
                   <div className="field-group"><label htmlFor="firebase-email">Email <span>*</span></label><input id="firebase-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div>
                   <div className="field-group"><label htmlFor="firebase-password">Password <span>*</span></label><input id="firebase-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={6} /></div>
-                  <p className="account-note"><UserRound size={14} /> {mode === "signup" ? "Your password is handled securely by Firebase Authentication and is never stored by Nexus." : "Use the same email and password you used when creating your account."}</p>
-                  <button className="primary-button account-submit" type="submit" disabled={busy}>{busy ? "Signing in…" : mode === "signup" ? "Create account" : "Sign in"} <ArrowRight size={17} /></button>
+                  <p className="account-note"><UserRound size={14} /> {mode === "signup" ? "Your password is handled by Firebase Authentication and is never stored by Nexus." : "Use the email and password for your Nexus account."}</p>
+                  <button className="primary-button account-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}</button>
                 </form>
               </>
             )}
