@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Camera,
   Check,
+  CheckCircle2,
   Clock3,
   EyeOff,
   FileImage,
@@ -16,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  hasFirebaseAdminRole,
   readCaseEvidence,
   saveCaseEvidence,
   saveCaseReporter,
@@ -92,6 +94,18 @@ function formatTimestamp(value?: string) {
   }).format(date);
 }
 
+function nextStatus(status: IncidentStatus): IncidentStatus | null {
+  const index = statusOrder.indexOf(status);
+  return index >= 0 && index < statusOrder.length - 1 ? statusOrder[index + 1] : null;
+}
+
+function statusActionLabel(status: IncidentStatus) {
+  if (status === "Reported") return "Verify report";
+  if (status === "Verified") return "Mark in progress";
+  if (status === "In progress") return "Mark resolved";
+  return "Case resolved";
+}
+
 async function compressPhoto(file: File) {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -134,6 +148,7 @@ export function ReportsClient() {
   const [incidents, setIncidents] = useLocalStorageState<Incident[]>(INCIDENTS_KEY, initialIncidents);
   const [attestations, setAttestations] = useLocalStorageState<IncidentAttestation[]>(ATTESTATIONS_KEY, []);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [detail, setDetail] = useState<Incident | null>(null);
   const [detailEvidence, setDetailEvidence] = useState<CaseEvidence | null>(null);
   const [detailEvidenceState, setDetailEvidenceState] = useState<"idle" | "loading" | "private">("idle");
@@ -141,10 +156,22 @@ export function ReportsClient() {
   const [attestIncident, setAttestIncident] = useState<Incident | null>(null);
 
   const refreshProfile = () => setProfile(readProfile());
+  const refreshAdmin = async () => {
+    try {
+      setIsAdmin(await hasFirebaseAdminRole());
+    } catch {
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(() => {
     refreshProfile();
+    void refreshAdmin();
     window.addEventListener("storage", refreshProfile);
-    return subscribeToFirebaseAuth(refreshProfile);
+    return subscribeToFirebaseAuth(() => {
+      refreshProfile();
+      void refreshAdmin();
+    });
   }, []);
 
   useEffect(() => {
@@ -176,6 +203,20 @@ export function ReportsClient() {
       return;
     }
     setReportOpen(true);
+  };
+
+  const advanceDetailStatus = () => {
+    if (!detail || !isAdmin) return;
+    const next = nextStatus(detail.status);
+    if (!next) return;
+    const now = new Date().toISOString();
+    const updated: Incident = {
+      ...detail,
+      status: next,
+      statusHistory: [...(detail.statusHistory ?? []), { status: next, at: now, by: "admin" }],
+    };
+    setIncidents((current) => current.map((item) => item.id === detail.id ? updated : item));
+    setDetail(updated);
   };
 
   const submitAttestation = (kind: AttestationKind) => {
@@ -252,6 +293,34 @@ export function ReportsClient() {
               <button type="button" onClick={() => setDetail(null)} aria-label="Close report"><X size={19} /></button>
             </div>
             <div className={styles.detailStatus}><span className={`${styles.severity} ${styles[detail.severity.toLowerCase()]}`}>{detail.severity} priority</span><StatusPill status={detail.status} /></div>
+
+            {isAdmin ? (
+              <section style={{ marginTop: 14, padding: 14, border: "1px solid #171715", borderRadius: 12, background: "#f7f7f3" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+                  <ShieldCheck size={18} />
+                  <div style={{ display: "grid", gap: 3, flex: 1 }}>
+                    <strong style={{ fontSize: 13 }}>Admin controls</strong>
+                    <small style={{ color: "#696963", lineHeight: 1.4 }}>
+                      {nextStatus(detail.status)
+                        ? `Change status: ${detail.status} → ${nextStatus(detail.status)}`
+                        : "This case has reached the final status."}
+                    </small>
+                  </div>
+                </div>
+                {nextStatus(detail.status) ? (
+                  <button
+                    type="button"
+                    onClick={advanceDetailStatus}
+                    style={{ width: "100%", minHeight: 44, marginTop: 12, border: "1px solid #171715", borderRadius: 9, background: "#171715", color: "#fff", fontWeight: 900, cursor: "pointer" }}
+                  >
+                    {statusActionLabel(detail.status)}
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 12, fontSize: 12, fontWeight: 800 }}><CheckCircle2 size={16} /> Case resolved</div>
+                )}
+              </section>
+            ) : null}
+
             <p className={styles.description}>{detail.description}</p>
             <div className={styles.detailGrid}>
               <span><MapPin size={16} /><span><small>Location</small><strong>{detail.landmark}</strong></span></span>
