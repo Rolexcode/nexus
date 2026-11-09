@@ -309,3 +309,36 @@
   .destinationCard { right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 52vh; }
   .hint { right: 12px; bottom: 18px; left: 12px; justify-content: center; transform: none; }
 }
+
+.googleDirections {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #171715;
+  color: #fff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 850;
+}
+.googleDirections:focus-visible { outline: 3px solid #3157d5; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .destinationCard {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+    max-height: min(42vh, 390px);
+    padding: 14px;
+    border-radius: 18px 18px 14px 14px;
+  }
+  .destinationTop h1 { font-size: 20px; }
+  .routeButton { min-height: 42px; margin-top: 12px; }
+  .directionPanel { gap: 8px; margin-top: 8px; padding: 10px; }
+  .directionPanel :global(.direction-summary) { font-size: 10px; }
+  .directionPanel :global(.direction-disclaimer) { font-size: 9px; }
+  .googleDirections { min-height: 42px; font-size: 11px; }
+}
