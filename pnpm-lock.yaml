@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@vercel/analytics':
+        specifier: ^2.0.1
+        version: 2.0.1
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -50,6 +53,10 @@ importers:
         version: 6.0.3
 
 packages:
+
+  '@vercel/analytics@2.0.1':
+    resolution:
+      tarball: https://registry.npmjs.org/@vercel/analytics/-/analytics-2.0.1.tgz
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -1848,6 +1855,8 @@ packages:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
+
+  '@vercel/analytics@2.0.1': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
