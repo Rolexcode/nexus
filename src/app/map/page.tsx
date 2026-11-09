@@ -131,18 +131,14 @@ export default function CampusMapPage() {
           {directionsOpen ? (
             <div className={styles.directionPanel}>
               <div className={styles.directionHeader}>
-                <span><small>Route</small><strong>To {selectedPlace.name}</strong></span>
-                <span className="direction-time">—</span>
+                <span><small>Walking route</small><strong>To {selectedPlace.name}</strong></span>
+                <span className="direction-time">Live GPS</span>
               </div>
-              <label htmlFor="direction-start">Starting point</label>
-              <select id="direction-start" defaultValue="main-gate">
-                {places.filter((place) => place.dataQuality === "mapped").map((place) => (
-                  <option value={place.id} key={place.id}>{place.name}</option>
-                ))}
-              </select>
-              <div className="direction-summary"><Navigation size={16} /><span>Finding your current location…</span></div>
-              <ol className="direction-steps"><li>Allow location access to start directions.</li></ol>
-              <p className="direction-disclaimer">Nexus uses your live location when permission is available.</p>
+              <div className="direction-summary"><Navigation size={16} /><span>Nexus shows your live position and destination. For road-following, turn-by-turn walking directions, continue in Google Maps.</span></div>
+              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}&travelmode=walking`} target="_blank" rel="noreferrer">
+                <Navigation size={17} /> Open walking directions in Google Maps
+              </a>
+              <p className="direction-disclaimer">Google Maps will use your current location where available. Campus paths that are not mapped by Google may still need the team's surveyed walkway data.</p>
             </div>
           ) : null}
         </aside>
