@@ -47,15 +47,38 @@ function project(point: Coordinates, a: Coordinates, b: Coordinates) {
   const snapped = interpolate(a, b, t);
   return { point: snapped, metres: distance(point, snapped) };
 }
+function cross(a: [number, number], b: [number, number]) { return a[0] * b[1] - a[1] * b[0]; }
+function projectPixel(point: [number, number], a: [number, number], b: [number, number]) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], den = dx * dx + dy * dy;
+  const t = den ? Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / den)) : 0;
+  const projected: [number, number] = [a[0] + dx * t, a[1] + dy * t];
+  return { t, point: projected, pixels: Math.hypot(point[0] - projected[0], point[1] - projected[1]) };
+}
 function intersection(a: [number, number], b: [number, number], c: [number, number], d: [number, number]) {
-  const rx = b[0] - a[0], ry = b[1] - a[1], sx = d[0] - c[0], sy = d[1] - c[1];
-  const denominator = rx * sy - ry * sx;
-  if (Math.abs(denominator) < 1e-8) return null;
-  const qx = c[0] - a[0], qy = c[1] - a[1];
-  const t = (qx * sy - qy * sx) / denominator;
-  const u = (qx * ry - qy * rx) / denominator;
-  if (t < -1e-6 || t > 1.000001 || u < -1e-6 || u > 1.000001) return null;
-  return { t: Math.max(0, Math.min(1, t)), u: Math.max(0, Math.min(1, u)) };
+  const r: [number, number] = [b[0] - a[0], b[1] - a[1]];
+  const s: [number, number] = [d[0] - c[0], d[1] - c[1]];
+  const denominator = cross(r, s);
+  const q: [number, number] = [c[0] - a[0], c[1] - a[1]];
+  if (Math.abs(denominator) > 1e-8) {
+    const t = cross(q, s) / denominator, u = cross(q, r) / denominator;
+    if (t >= -1e-6 && t <= 1.000001 && u >= -1e-6 && u <= 1.000001) {
+      return { t: Math.max(0, Math.min(1, t)), u: Math.max(0, Math.min(1, u)) };
+    }
+  }
+  const angle = Math.abs(Math.atan2(cross(r, s), r[0] * s[0] + r[1] * s[1]));
+  const parallel = Math.min(angle, Math.PI - angle) < rad(25);
+  const candidates = [
+    { point: a, t: 0, own: "a" }, { point: b, t: 1, own: "a" },
+  ];
+  for (const item of candidates) {
+    const snap = projectPixel(item.point, c, d);
+    if (snap.pixels <= (parallel ? 1.5 : 16)) return { t: item.t, u: snap.t };
+  }
+  for (const item of [{ point: c, t: 0 }, { point: d, t: 1 }]) {
+    const snap = projectPixel(item.point, a, b);
+    if (snap.pixels <= (parallel ? 1.5 : 16)) return { t: snap.t, u: item.t };
+  }
+  return null;
 }
 function buildGraph(mode: TravelMode) {
   const raw: RawSegment[] = [];
