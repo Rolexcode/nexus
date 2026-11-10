@@ -164,8 +164,6 @@ export function CampusMap({
     const requestKey = `${selectedPlace.id}:${travelMode}`;
     if (externalRequestKey.current === requestKey) return;
     externalRequestKey.current = requestKey;
-    let cancelled = false;
-
     const loadExternalRoute = async () => {
       try {
         const params = new URLSearchParams({
@@ -179,7 +177,7 @@ export function CampusMap({
           throw new Error(result.error || "External route unavailable");
         }
         const campusRoute = findCampusRoute(fallbackStart.coordinates, selectedPlace.coordinates, travelMode);
-        if (!campusRoute || cancelled) return;
+        if (!campusRoute || externalRequestKey.current !== requestKey) return;
 
         const externalSteps = Array.isArray(result.steps) ? result.steps : [];
         const campusSteps = campusRoute.steps.filter((step, index) => index > 0 && step.maneuver !== "arrive");
@@ -193,14 +191,13 @@ export function CampusMap({
           snappedStart: liveLocation.coordinates,
           snappedDestination: selectedPlace.coordinates,
         };
-        if (!cancelled) setExternalRoute(combined);
+        if (externalRequestKey.current === requestKey) setExternalRoute(combined);
       } catch {
-        if (!cancelled) setExternalRoute(null);
+        if (externalRequestKey.current === requestKey) setExternalRoute(null);
       }
     };
 
     void loadExternalRoute();
-    return () => { cancelled = true; };
   }, [routeVisible, liveLocation, selectedPlace, fallbackStart, liveRoute, travelMode]);
 
   const route = liveRoute ?? externalRoute ?? gateRoute;
