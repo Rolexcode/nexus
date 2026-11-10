@@ -147,7 +147,7 @@ export default function CampusMapPage() {
                     {routeInfo.route.steps.map((step, index) => <li key={index}>{step}</li>)}
                   </ol>
                   {routeInfo.startMode === "gate" ? (
-                    <a className={styles.googleDirections} href="https://www.google.com/maps/dir/?api=1&destination=6.59195,3.99485&travelmode=walking" target="_blank" rel="noreferrer">
+                    <a className={styles.googleDirections} href="https://www.google.com/maps/dir/?api=1&destination=6.5921591,3.995592&travelmode=walking" target="_blank" rel="noreferrer">
                       <Navigation size={17} /> Get to Main Gate first
                     </a>
                   ) : null}
@@ -155,7 +155,7 @@ export default function CampusMapPage() {
               ) : (
                 <div className="direction-summary"><Navigation size={16} /><span>Nexus could not confirm a continuous path between these points in the digitised network. We will not draw a straight line and label it as a walkable route.</span></div>
               )}
-              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.59195,3.99485" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=walking`} target="_blank" rel="noreferrer">
+              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=walking`} target="_blank" rel="noreferrer">
                 <Navigation size={17} /> {routeInfo.startMode === "gate" ? "Open route to campus entrance" : "Open walking directions in Google Maps"}
               </a>
               <p className="direction-disclaimer">Campus paths are a first-pass digitisation of the student map, not field-verified survey geometry. Distances and route steps are estimates. Please confirm junctions on site before relying on them for safety-critical travel.</p>
