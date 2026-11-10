@@ -180,7 +180,7 @@ export function CampusMap({
         if (!campusRoute || externalRequestKey.current !== requestKey) return;
 
         const externalSteps = Array.isArray(result.steps) ? result.steps : [];
-        const campusSteps = campusRoute.steps.filter((step, index) => index > 0 && step.maneuver !== "arrive");
+        const campusSteps = campusRoute.steps.filter((step) => step.maneuver !== "arrive");
         const combined: CampusRoute = {
           coordinates: [...result.coordinates, ...campusRoute.coordinates.slice(1)],
           distanceMetres: Math.round(Number(result.distanceMetres) || 0) + campusRoute.distanceMetres,
