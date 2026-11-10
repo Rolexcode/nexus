@@ -143,12 +143,12 @@ export default function CampusMapPage() {
                 <button type="button" aria-pressed={travelMode === "tricycle"} className={travelMode === "tricycle" ? styles.travelModeActive : ""} onClick={() => setTravelMode("tricycle")}>Tricycle</button>
               </div>
               <div className={styles.directionHeader}>
-                <span><small>Campus walking route</small><strong>To {selectedPlace.name}</strong></span>
-                <span className="direction-time">{routeInfo.route ? `${Math.max(1, Math.ceil(routeInfo.route.distanceMetres / 75))} min` : "Route check"}</span>
+                <span><small>Directions</small><strong>To {selectedPlace.name}</strong></span>
+                <span className="direction-time">{routeInfo.route ? `${routeInfo.route.durationMinutes} min` : "Route check"}</span>
               </div>
               {routeInfo.route ? (
                 <>
-                  <div className="direction-summary"><Navigation size={16} /><span>{routeInfo.startMode === "live" ? "A connected route was found from your current GPS position." : "Your current position is outside the mapped campus paths. This campus route starts at Main Gate."} About {routeInfo.route.distanceMetres} m along the mapped {travelMode === "tricycle" ? "vehicle-accessible road" : "campus path"} network.</span></div>
+                  <div className="direction-summary"><Navigation size={16} /><span>{routeInfo.startMode === "live" ? "Your route starts at your current GPS position and follows the connected road and campus-path network." : "Your current position is outside the mapped campus paths. This campus route starts at Main Gate."} About {routeInfo.route.distanceMetres.toLocaleString()} m in total, with an estimated travel time of {routeInfo.route.durationMinutes} minutes.</span></div>
                   <ol className="direction-steps">
                     {routeInfo.route.steps.map((step, index) => <li key={index}>{step.instruction}</li>)}
                   </ol>
@@ -164,7 +164,7 @@ export default function CampusMapPage() {
               <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=${travelMode === "walk" ? "walking" : travelMode === "bicycle" ? "bicycling" : "driving"}`} target="_blank" rel="noreferrer">
                 <Navigation size={17} /> {routeInfo.startMode === "gate" ? "Open route to campus entrance" : "Open walking directions in Google Maps"}
               </a>
-              <p className="direction-disclaimer">The student map has been digitised as an initial route network. Road access classifications and turn instructions remain provisional until verified on campus. Follow local signs and conditions.</p>
+              <p className="direction-disclaimer">Campus paths are based on the team map and remain provisional until field-verified. Routes outside campus use OpenStreetMap data via FOSSGIS OSRM; map coverage and access can vary. Estimated times do not include live traffic. Follow local signs and conditions.</p>
             </div>
           ) : null}
         </aside>
