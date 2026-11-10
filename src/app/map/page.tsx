@@ -161,7 +161,7 @@ export default function CampusMapPage() {
               ) : (
                 <div className="direction-summary"><Navigation size={16} /><span>Nexus could not confirm a continuous path between these points in the digitised network. We will not draw a straight line and label it as a walkable route.</span></div>
               )}
-              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode={travelMode}`} target="_blank" rel="noreferrer">
+              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=${travelMode === "walk" ? "walking" : travelMode === "bicycle" ? "bicycling" : "driving"}`} target="_blank" rel="noreferrer">
                 <Navigation size={17} /> {routeInfo.startMode === "gate" ? "Open route to campus entrance" : "Open walking directions in Google Maps"}
               </a>
               <p className="direction-disclaimer">The student map has been digitised as an initial route network. Road access classifications and turn instructions remain provisional until verified on campus. Follow local signs and conditions.</p>
