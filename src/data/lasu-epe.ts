@@ -12,7 +12,7 @@ export const lasuEpePlaces: Place[] = [
     category: "Transport",
     description: "The primary entrance and the starting point for campus directions.",
     services: ["Campus entrance", "Pick-up point", "Directions"],
-    coordinates: [6.59195, 3.99485],
+    coordinates: [6.5921591, 3.995592],
     landmark: "LASU Epe campus entrance",
     hours: "Open daily",
     dataQuality: "demo",
