@@ -8,7 +8,9 @@
 export type CampusRoad = {
   id: string;
   name: string;
-  coordinates: [number, number][];\n  referencePixels: [number, number][];\n  access: ("walk" | "bicycle" | "tricycle")[];
+  coordinates: [number, number][];
+  referencePixels: [number, number][];
+  access: ("walk" | "bicycle" | "tricycle")[];
 };
 
 export const lasuEpeRoads: CampusRoad[] = [
