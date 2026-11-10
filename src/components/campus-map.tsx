@@ -32,7 +32,8 @@ type CampusMapProps = {
   places: Place[];
   selectedPlace: Place | null;
   onSelect: (place: Place) => void;
-  travelMode: TravelMode;\n  onRouteUpdate?: (route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => void;
+  travelMode: TravelMode;
+  onRouteUpdate?: (route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => void;
 };
 
 type LiveLocation = {
