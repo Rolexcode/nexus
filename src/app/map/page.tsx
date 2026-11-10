@@ -165,6 +165,7 @@ export default function CampusMapPage() {
                 <Navigation size={17} /> {routeInfo.startMode === "gate" ? "Open route to campus entrance" : "Open walking directions in Google Maps"}
               </a>
               <p className="direction-disclaimer">Campus paths are based on the team map and remain provisional until field-verified. Routes outside campus use OpenStreetMap data via FOSSGIS OSRM; map coverage and access can vary. Estimated times do not include live traffic. Follow local signs and conditions.</p>
+              <p className="direction-disclaimer">Routing data: © OpenStreetMap contributors · FOSSGIS OSRM</p>
             </div>
           ) : null}
         </aside>
