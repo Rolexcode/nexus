@@ -45,9 +45,7 @@ function ZoomAwareMarkers({
   places,
   selectedPlace,
   onSelect,
-  onRouteUpdate,
-  travelMode,
-}: CampusMapProps) {
+}: Pick<CampusMapProps, "places" | "selectedPlace" | "onSelect">) {
   const map = useMapEvents({
     zoomend: () => setZoom(map.getZoom()),
   });
