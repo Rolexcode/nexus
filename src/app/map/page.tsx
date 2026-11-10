@@ -153,7 +153,7 @@ export default function CampusMapPage() {
                     {routeInfo.route.steps.map((step, index) => <li key={index}>{step.instruction}</li>)}
                   </ol>
                   {routeInfo.startMode === "gate" ? (
-                    <a className={styles.googleDirections} href="https://www.google.com/maps/dir/?api=1&destination=6.5921591,3.995592&travelmode=walking" target="_blank" rel="noreferrer">
+                    <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=6.5921591,3.995592&travelmode=${travelMode === "walk" ? "walking" : travelMode === "bicycle" ? "bicycling" : "driving"}`} target="_blank" rel="noreferrer">
                       <Navigation size={17} /> Get to Main Gate first
                     </a>
                   ) : null}
