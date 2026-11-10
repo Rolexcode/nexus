@@ -134,6 +134,7 @@ export function CampusMap({
   selectedPlace,
   onSelect,
   onRouteUpdate,
+  travelMode,
 }: CampusMapProps) {
   const [routeVisible, setRouteVisible] = useState(false);
   const [routeStartId] = useState("main-gate");
