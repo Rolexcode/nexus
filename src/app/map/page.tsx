@@ -138,7 +138,7 @@ export default function CampusMapPage() {
               <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}&travelmode=walking`} target="_blank" rel="noreferrer">
                 <Navigation size={17} /> Open walking directions in Google Maps
               </a>
-              <p className="direction-disclaimer">Google Maps will use your current location where available. Campus paths that are not mapped by Google may still need the team's surveyed walkway data.</p>
+              <p className="direction-disclaimer">The campus road and path lines shown on Nexus are digitised from the LASU Epe campus map and are approximate, not field-verified survey routes. Use Google Maps for road-following directions to the selected destination; confirm the final on-campus path locally until the mapped junctions have been checked on site.</p>
             </div>
           ) : null}
         </aside>
