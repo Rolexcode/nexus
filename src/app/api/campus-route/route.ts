@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       coordinates: geometry.map((point: number[]) => [point[1], point[0]] as Coordinates),
       distanceMetres: Math.round(Number(route.distance) || 0),
       durationMinutes: Math.max(1, Math.ceil((Number(route.duration) || 0) / 60)),
-      roadNames: [...new Set((route.legs ?? []).flatMap((leg: any) => (leg.steps ?? []).map((step: any) => step.name).filter(Boolean))],
+      roadNames: [...new Set((route.legs ?? []).flatMap((leg: any) => (leg.steps ?? []).map((step: any) => step.name).filter(Boolean)))],
       steps,
       source: "OpenStreetMap road network via FOSSGIS OSRM",
       profile,
