@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import L from "leaflet";
 import {
   Circle,
@@ -17,6 +17,7 @@ import {
 } from "react-leaflet";
 import { CampusBaseLayers } from "./campus-base-layers";
 import { lasuEpePlaces as allPlaces } from "@/data/lasu-epe";
+import { lasuEpeRoads } from "@/data/lasu-epe-roads";
 import {
   CAMPUS_CENTER,
   categoryClass,
@@ -36,18 +37,6 @@ type LiveLocation = {
   coordinates: Coordinates;
   accuracy: number;
 };
-
-function distanceMetres(from: Coordinates, to: Coordinates) {
-  const earthRadius = 6_371_000;
-  const radians = (value: number) => value * Math.PI / 180;
-  const latitudeDelta = radians(to[0] - from[0]);
-  const longitudeDelta = radians(to[1] - from[1]);
-  const fromLatitude = radians(from[0]);
-  const toLatitude = radians(to[0]);
-  const haversine = Math.sin(latitudeDelta / 2) ** 2
-    + Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(longitudeDelta / 2) ** 2;
-  return 2 * earthRadius * Math.asin(Math.sqrt(haversine));
-}
 
 function ZoomAwareMarkers({
   places,
@@ -135,60 +124,13 @@ function makeIcon(place: Place, selected: boolean) {
   });
 }
 
-function syncDirectionPanel(
-  state: LocationState,
-  liveLocation: LiveLocation | null,
-  destination: Place | null,
-) {
-  const label = document.querySelector<HTMLLabelElement>('label[for="direction-start"]');
-  const select = document.querySelector<HTMLSelectElement>("#direction-start");
-  const summary = document.querySelector<HTMLElement>(".direction-summary span");
-  const time = document.querySelector<HTMLElement>(".direction-time");
-  const steps = document.querySelector<HTMLOListElement>(".direction-steps");
-  const disclaimer = document.querySelector<HTMLElement>(".direction-disclaimer");
-
-  if (!label || !select) return;
-
-  if (state === "locating") {
-    label.textContent = "Starting point — finding your location…";
-    select.disabled = true;
-    return;
-  }
-
-  if (state === "live" && liveLocation && destination) {
-    label.textContent = "Starting point — your live location";
-    select.disabled = true;
-    const metres = Math.round(distanceMetres(liveLocation.coordinates, destination.coordinates));
-    const minutes = Math.max(1, Math.ceil(metres / 75));
-    if (summary) summary.innerHTML = `<strong>${metres} m</strong> from your current position`;
-    if (time) time.textContent = `${minutes} min`;
-    if (steps) {
-      steps.innerHTML = [
-        "Start from your current GPS position.",
-        `Follow the highlighted line toward ${destination.name}.`,
-        `Use ${destination.landmark} as your final landmark.`,
-        `Arrive at ${destination.name}.`,
-      ].map((step) => `<li>${step}</li>`).join("");
-    }
-    if (disclaimer) {
-      disclaimer.textContent = "Your position updates while directions are open. The current line connects you to the destination; exact walkway turns will be added as campus paths are mapped.";
-    }
-    return;
-  }
-
-  select.disabled = false;
-  if (state === "denied") label.textContent = "Starting point — location permission denied";
-  else if (state === "unavailable") label.textContent = "Starting point — live location unavailable";
-  else label.textContent = "Starting point";
-}
-
 export function CampusMap({
   places,
   selectedPlace,
   onSelect,
 }: CampusMapProps) {
   const [routeVisible, setRouteVisible] = useState(false);
-  const [routeStartId, setRouteStartId] = useState("main-gate");
+  const [routeStartId] = useState("main-gate");
   const [locationState, setLocationState] = useState<LocationState>("idle");
   const [liveLocation, setLiveLocation] = useState<LiveLocation | null>(null);
 
@@ -196,15 +138,8 @@ export function CampusMap({
   const routeStartCoordinates = liveLocation?.coordinates
     ?? ((locationState === "denied" || locationState === "unavailable") ? fallbackStart?.coordinates ?? null : null);
 
-  const routePositions = useMemo(() => {
-    if (!routeVisible || !routeStartCoordinates || !selectedPlace) return null;
-    if (distanceMetres(routeStartCoordinates, selectedPlace.coordinates) < 4) return null;
-    return [routeStartCoordinates, selectedPlace.coordinates] as Coordinates[];
-  }, [routeStartCoordinates, routeVisible, selectedPlace]);
-
   useEffect(() => {
     setRouteVisible(false);
-    setRouteStartId("main-gate");
     setLiveLocation(null);
     setLocationState("idle");
   }, [selectedPlace?.id]);
@@ -245,14 +180,6 @@ export function CampusMap({
   }, [routeVisible]);
 
   useEffect(() => {
-    if (!routeVisible) return;
-    const timer = window.setTimeout(() => {
-      syncDirectionPanel(locationState, liveLocation, selectedPlace);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [liveLocation, locationState, routeVisible, selectedPlace]);
-
-  useEffect(() => {
     const onClick = (event: MouseEvent) => {
       const target = event.target as Element | null;
       const routeButton = target?.closest<HTMLButtonElement>(".route-button");
@@ -262,21 +189,9 @@ export function CampusMap({
       }, 0);
     };
 
-    const onChange = (event: Event) => {
-      const target = event.target as HTMLSelectElement | null;
-      if (target?.id === "direction-start") {
-        setRouteStartId(target.value);
-        if (locationState !== "live") setRouteVisible(true);
-      }
-    };
-
     document.addEventListener("click", onClick);
-    document.addEventListener("change", onChange);
-    return () => {
-      document.removeEventListener("click", onClick);
-      document.removeEventListener("change", onChange);
-    };
-  }, [locationState]);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
 
   return (
     <MapContainer
@@ -297,18 +212,21 @@ export function CampusMap({
         routeVisible={routeVisible}
       />
 
-      {routePositions ? (
-        <>
-          <Polyline
-            positions={routePositions}
-            pathOptions={{ color: "#ffffff", weight: 10, opacity: 0.92, lineCap: "round", lineJoin: "round" }}
-          />
-          <Polyline
-            positions={routePositions}
-            pathOptions={{ color: "#3157d5", weight: 6, opacity: 1, lineCap: "round", lineJoin: "round" }}
-          />
-        </>
-      ) : null}
+      {lasuEpeRoads.map((road) => (
+        <Polyline
+          key={road.id}
+          positions={road.coordinates}
+          pathOptions={{
+            color: "#263b31",
+            weight: 4,
+            opacity: 0.82,
+            lineCap: "round",
+            lineJoin: "round",
+          }}
+        >
+          <Tooltip sticky>{road.name} · approximate mapped path</Tooltip>
+        </Polyline>
+      ))}
 
       {routeVisible && liveLocation ? (
         <>
