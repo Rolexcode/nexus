@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import {
   Circle,
@@ -18,6 +18,7 @@ import {
 import { CampusBaseLayers } from "./campus-base-layers";
 import { lasuEpePlaces as allPlaces } from "@/data/lasu-epe";
 import { lasuEpeRoads } from "@/data/lasu-epe-roads";
+import { findCampusRoute, type CampusRoute } from "@/lib/campus-routing";
 import {
   CAMPUS_CENTER,
   categoryClass,
@@ -31,6 +32,7 @@ type CampusMapProps = {
   places: Place[];
   selectedPlace: Place | null;
   onSelect: (place: Place) => void;
+  onRouteUpdate?: (route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => void;
 };
 
 type LiveLocation = {
@@ -42,6 +44,7 @@ function ZoomAwareMarkers({
   places,
   selectedPlace,
   onSelect,
+  onRouteUpdate,
 }: CampusMapProps) {
   const map = useMapEvents({
     zoomend: () => setZoom(map.getZoom()),
@@ -84,18 +87,18 @@ function ZoomAwareMarkers({
 
 function MapViewport({
   place,
-  routeStartCoordinates,
+  routeCoordinates,
   routeVisible,
 }: {
   place: Place | null;
-  routeStartCoordinates: Coordinates | null;
+  routeCoordinates: Coordinates[] | null;
   routeVisible: boolean;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (routeVisible && routeStartCoordinates && place) {
-      map.fitBounds([routeStartCoordinates, place.coordinates], {
+    if (routeVisible && routeCoordinates?.length) {
+      map.fitBounds(routeCoordinates, {
         padding: [64, 64],
         maxZoom: 19,
         animate: true,
@@ -109,7 +112,7 @@ function MapViewport({
     } else {
       map.flyTo(CAMPUS_CENTER, 16, { duration: 0.6 });
     }
-  }, [map, place, routeStartCoordinates, routeVisible]);
+  }, [map, place, routeCoordinates, routeVisible]);
 
   return null;
 }
@@ -135,14 +138,27 @@ export function CampusMap({
   const [liveLocation, setLiveLocation] = useState<LiveLocation | null>(null);
 
   const fallbackStart = allPlaces.find((place) => place.id === routeStartId) ?? allPlaces[0] ?? null;
-  const routeStartCoordinates = liveLocation?.coordinates
-    ?? ((locationState === "denied" || locationState === "unavailable") ? fallbackStart?.coordinates ?? null : null);
+  const liveRoute = useMemo(() => {
+    if (!routeVisible || !liveLocation || !selectedPlace) return null;
+    return findCampusRoute(liveLocation.coordinates, selectedPlace.coordinates);
+  }, [liveLocation, routeVisible, selectedPlace]);
+  const gateRoute = useMemo(() => {
+    if (!routeVisible || !fallbackStart || !selectedPlace) return null;
+    return findCampusRoute(fallbackStart.coordinates, selectedPlace.coordinates);
+  }, [fallbackStart, routeVisible, selectedPlace]);
+  const route = liveRoute ?? gateRoute;
+  const routeStartMode: "live" | "gate" | "unavailable" = liveRoute ? "live" : gateRoute ? "gate" : "unavailable";
+  const routeCoordinates = route?.coordinates ?? null;
 
   useEffect(() => {
     setRouteVisible(false);
     setLiveLocation(null);
     setLocationState("idle");
   }, [selectedPlace?.id]);
+
+  useEffect(() => {
+    onRouteUpdate?.(routeVisible ? route : null, routeVisible ? routeStartMode : "unavailable");
+  }, [onRouteUpdate, route, routeStartMode, routeVisible]);
 
   useEffect(() => {
     if (!routeVisible) {
@@ -208,7 +224,7 @@ export function CampusMap({
       <ScaleControl position="bottomleft" imperial={false} />
       <MapViewport
         place={selectedPlace}
-        routeStartCoordinates={routeStartCoordinates}
+        routeCoordinates={routeCoordinates}
         routeVisible={routeVisible}
       />
 
@@ -228,7 +244,20 @@ export function CampusMap({
         </Polyline>
       ))}
 
-      {routeVisible && liveLocation ? (
+      {routeVisible && routeCoordinates ? (
+        <>
+          <Polyline
+            positions={routeCoordinates}
+            pathOptions={{ color: "#ffffff", weight: 11, opacity: 0.95, lineCap: "round", lineJoin: "round" }}
+          />
+          <Polyline
+            positions={routeCoordinates}
+            pathOptions={{ color: "#3157d5", weight: 6, opacity: 1, lineCap: "round", lineJoin: "round" }}
+          />
+        </>
+      ) : null}
+
+      {routeVisible && routeStartMode === "live" && liveLocation ? (
         <>
           <Circle
             center={liveLocation.coordinates}
@@ -244,9 +273,9 @@ export function CampusMap({
             <Popup>Your current location · ±{Math.round(liveLocation.accuracy)} m</Popup>
           </CircleMarker>
         </>
-      ) : routeVisible && routeStartCoordinates && fallbackStart ? (
+      ) : routeVisible && routeStartMode === "gate" && fallbackStart ? (
         <CircleMarker
-          center={routeStartCoordinates}
+          center={fallbackStart.coordinates}
           radius={8}
           pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#3157d5", fillOpacity: 1 }}
         >
