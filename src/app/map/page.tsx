@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { lasuEpePlaces as places } from "@/data/lasu-epe";
 import type { Place } from "@/lib/data";
-import type { CampusRoute } from "@/lib/campus-routing";
+import type { CampusRoute, TravelMode } from "@/lib/campus-routing";
 import styles from "./map.module.css";
 
 const CampusMap = dynamic(
@@ -27,6 +27,7 @@ export default function CampusMapPage() {
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(initialPlace);
   const [directionsOpen, setDirectionsOpen] = useState(false);
+  const [travelMode, setTravelMode] = useState<TravelMode>("walk");
   const [routeInfo, setRouteInfo] = useState<{ route: CampusRoute | null; startMode: "live" | "gate" | "unavailable" }>({ route: null, startMode: "unavailable" });
   const handleRouteUpdate = useCallback((route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => {
     setRouteInfo({ route, startMode });
@@ -51,7 +52,7 @@ export default function CampusMapPage() {
   return (
     <main className={styles.page}>
       <div className={styles.map}>
-        <CampusMap places={filteredPlaces} selectedPlace={selectedPlace} onSelect={selectPlace} onRouteUpdate={handleRouteUpdate} />
+        <CampusMap places={filteredPlaces} selectedPlace={selectedPlace} onSelect={selectPlace} travelMode={travelMode} onRouteUpdate={handleRouteUpdate} />
       </div>
 
       <header className={styles.toolbar}>
@@ -136,18 +137,23 @@ export default function CampusMapPage() {
 
           {directionsOpen ? (
             <div className={styles.directionPanel}>
+              <div className={styles.travelModes} role="group" aria-label="Choose travel mode">
+                <button type="button" aria-pressed={travelMode === "walk"} className={travelMode === "walk" ? styles.travelModeActive : ""} onClick={() => setTravelMode("walk")}>Walk</button>
+                <button type="button" aria-pressed={travelMode === "bicycle"} className={travelMode === "bicycle" ? styles.travelModeActive : ""} onClick={() => setTravelMode("bicycle")}>Bicycle</button>
+                <button type="button" aria-pressed={travelMode === "tricycle"} className={travelMode === "tricycle" ? styles.travelModeActive : ""} onClick={() => setTravelMode("tricycle")}>Tricycle</button>
+              </div>
               <div className={styles.directionHeader}>
                 <span><small>Campus walking route</small><strong>To {selectedPlace.name}</strong></span>
                 <span className="direction-time">{routeInfo.route ? `${Math.max(1, Math.ceil(routeInfo.route.distanceMetres / 75))} min` : "Route check"}</span>
               </div>
               {routeInfo.route ? (
                 <>
-                  <div className="direction-summary"><Navigation size={16} /><span>{routeInfo.startMode === "live" ? "A connected route was found from your current GPS position." : "Your current position is outside the mapped campus paths. This campus route starts at Main Gate."} About {routeInfo.route.distanceMetres} m along the digitised campus network.</span></div>
+                  <div className="direction-summary"><Navigation size={16} /><span>{routeInfo.startMode === "live" ? "A connected route was found from your current GPS position." : "Your current position is outside the mapped campus paths. This campus route starts at Main Gate."} About {routeInfo.route.distanceMetres} m along the mapped {travelMode === "tricycle" ? "vehicle-accessible road" : "campus path"} network.</span></div>
                   <ol className="direction-steps">
-                    {routeInfo.route.steps.map((step, index) => <li key={index}>{step}</li>)}
+                    {routeInfo.route.steps.map((step, index) => <li key={index}>{step.instruction}</li>)}
                   </ol>
                   {routeInfo.startMode === "gate" ? (
-                    <a className={styles.googleDirections} href="https://www.google.com/maps/dir/?api=1&destination=6.5921591,3.995592&travelmode=walking" target="_blank" rel="noreferrer">
+                    <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=6.5921591,3.995592&travelmode=${travelMode === "walk" ? "walking" : travelMode === "bicycle" ? "bicycling" : "driving"}`} target="_blank" rel="noreferrer">
                       <Navigation size={17} /> Get to Main Gate first
                     </a>
                   ) : null}
@@ -155,10 +161,10 @@ export default function CampusMapPage() {
               ) : (
                 <div className="direction-summary"><Navigation size={16} /><span>Nexus could not confirm a continuous path between these points in the digitised network. We will not draw a straight line and label it as a walkable route.</span></div>
               )}
-              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=walking`} target="_blank" rel="noreferrer">
+              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=${travelMode === "walk" ? "walking" : travelMode === "bicycle" ? "bicycling" : "driving"}`} target="_blank" rel="noreferrer">
                 <Navigation size={17} /> {routeInfo.startMode === "gate" ? "Open route to campus entrance" : "Open walking directions in Google Maps"}
               </a>
-              <p className="direction-disclaimer">Campus paths are a first-pass digitisation of the student map, not field-verified survey geometry. Distances and route steps are estimates. Please confirm junctions on site before relying on them for safety-critical travel.</p>
+              <p className="direction-disclaimer">The student map has been digitised as an initial route network. Road access classifications and turn instructions remain provisional until verified on campus. Follow local signs and conditions.</p>
             </div>
           ) : null}
         </aside>
