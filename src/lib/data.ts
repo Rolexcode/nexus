@@ -68,8 +68,8 @@ export type Incident = {
   evidenceLabel?: string;
 };
 
-export const CAMPUS_CENTER: [number, number] = [6.5942497, 3.9959479];
-export const CAMPUS_GATE: [number, number] = [6.59195, 3.99485];
+export const CAMPUS_CENTER: [number, number] = [6.5897139, 3.9972858];
+export const CAMPUS_GATE: [number, number] = [6.5921591, 3.995592];
 
 export const categories: Array<"All" | PlaceCategory> = [
   "All",
