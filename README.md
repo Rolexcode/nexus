@@ -83,4 +83,4 @@ The frontend is built with Next.js, React, TypeScript, Leaflet and React Leaflet
 
 ## Data note
 
-The included dataset is for product demonstration. Only locations explicitly marked as mapped use publicly available coordinates. All other internal campus pins must be verified on site before production use.
+The campus place and road references are digitised from the team's LASU Epe campus map. The first-pass dataset contains 25 mapped places/landmarks and 14 traced road/path centre-lines. Coordinates are approximate reconstructions anchored to New Engineering Hall and the map scale bar; they are not field-verified survey coordinates. Nexus displays the road network as a visual reference and does not claim turn-by-turn campus routing from it. Verify major pins and every road/path junction on site before relying on the network for navigation.
