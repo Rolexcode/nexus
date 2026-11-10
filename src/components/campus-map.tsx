@@ -18,7 +18,7 @@ import {
 import { CampusBaseLayers } from "./campus-base-layers";
 import { lasuEpePlaces as allPlaces } from "@/data/lasu-epe";
 import { lasuEpeRoads } from "@/data/lasu-epe-roads";
-import { findCampusRoute, type CampusRoute } from "@/lib/campus-routing";
+import { findCampusRoute, type CampusRoute, type TravelMode } from "@/lib/campus-routing";
 import {
   CAMPUS_CENTER,
   categoryClass,
@@ -32,7 +32,7 @@ type CampusMapProps = {
   places: Place[];
   selectedPlace: Place | null;
   onSelect: (place: Place) => void;
-  onRouteUpdate?: (route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => void;
+  travelMode: TravelMode;\n  onRouteUpdate?: (route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => void;
 };
 
 type LiveLocation = {
@@ -141,12 +141,12 @@ export function CampusMap({
   const fallbackStart = allPlaces.find((place) => place.id === routeStartId) ?? allPlaces[0] ?? null;
   const liveRoute = useMemo(() => {
     if (!routeVisible || !liveLocation || !selectedPlace) return null;
-    return findCampusRoute(liveLocation.coordinates, selectedPlace.coordinates);
-  }, [liveLocation, routeVisible, selectedPlace]);
+    return findCampusRoute(liveLocation.coordinates, selectedPlace.coordinates, travelMode);
+  }, [liveLocation, routeVisible, selectedPlace, travelMode]);
   const gateRoute = useMemo(() => {
     if (!routeVisible || !fallbackStart || !selectedPlace) return null;
-    return findCampusRoute(fallbackStart.coordinates, selectedPlace.coordinates);
-  }, [fallbackStart, routeVisible, selectedPlace]);
+    return findCampusRoute(fallbackStart.coordinates, selectedPlace.coordinates, travelMode);
+  }, [fallbackStart, routeVisible, selectedPlace, travelMode]);
   const route = liveRoute ?? gateRoute;
   const routeStartMode: "live" | "gate" | "unavailable" = liveRoute ? "live" : gateRoute ? "gate" : "unavailable";
   const routeCoordinates = route?.coordinates ?? null;
