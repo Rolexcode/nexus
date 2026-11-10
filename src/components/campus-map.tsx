@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import {
   Circle,
@@ -138,6 +138,8 @@ export function CampusMap({
   const [routeStartId] = useState("main-gate");
   const [locationState, setLocationState] = useState<LocationState>("idle");
   const [liveLocation, setLiveLocation] = useState<LiveLocation | null>(null);
+  const [externalRoute, setExternalRoute] = useState<CampusRoute | null>(null);
+  const externalRequestKey = useRef("");
 
   const fallbackStart = allPlaces.find((place) => place.id === routeStartId) ?? allPlaces[0] ?? null;
   const liveRoute = useMemo(() => {
@@ -148,13 +150,68 @@ export function CampusMap({
     if (!routeVisible || !fallbackStart || !selectedPlace) return null;
     return findCampusRoute(fallbackStart.coordinates, selectedPlace.coordinates, travelMode);
   }, [fallbackStart, routeVisible, selectedPlace, travelMode]);
-  const route = liveRoute ?? gateRoute;
-  const routeStartMode: "live" | "gate" | "unavailable" = liveRoute ? "live" : gateRoute ? "gate" : "unavailable";
+  useEffect(() => {
+    if (!routeVisible) {
+      externalRequestKey.current = "";
+      setExternalRoute(null);
+      return;
+    }
+    if (!liveLocation || !selectedPlace || !fallbackStart || liveRoute) {
+      if (liveRoute) setExternalRoute(null);
+      return;
+    }
+
+    const requestKey = `${selectedPlace.id}:${travelMode}`;
+    if (externalRequestKey.current === requestKey) return;
+    externalRequestKey.current = requestKey;
+    let cancelled = false;
+
+    const loadExternalRoute = async () => {
+      try {
+        const params = new URLSearchParams({
+          lat: String(liveLocation.coordinates[0]),
+          lng: String(liveLocation.coordinates[1]),
+          mode: travelMode,
+        });
+        const response = await fetch(`/api/campus-route?${params.toString()}`);
+        const result = await response.json();
+        if (!response.ok || !Array.isArray(result.coordinates) || !result.coordinates.length) {
+          throw new Error(result.error || "External route unavailable");
+        }
+        const campusRoute = findCampusRoute(fallbackStart.coordinates, selectedPlace.coordinates, travelMode);
+        if (!campusRoute || cancelled) return;
+
+        const externalSteps = Array.isArray(result.steps) ? result.steps : [];
+        const campusSteps = campusRoute.steps.filter((step, index) => index > 0 && step.maneuver !== "arrive");
+        const combined: CampusRoute = {
+          coordinates: [...result.coordinates, ...campusRoute.coordinates.slice(1)],
+          distanceMetres: Math.round(Number(result.distanceMetres) || 0) + campusRoute.distanceMetres,
+          durationMinutes: Math.max(1, Number(result.durationMinutes) || 1) + campusRoute.durationMinutes,
+          roadNames: [...new Set([...(result.roadNames ?? []), ...campusRoute.roadNames])],
+          steps: [...externalSteps, ...campusSteps, { instruction: `You have arrived at ${selectedPlace.name}.`, distanceMetres: 0, maneuver: "arrive" }],
+          mode: travelMode,
+          snappedStart: liveLocation.coordinates,
+          snappedDestination: selectedPlace.coordinates,
+        };
+        if (!cancelled) setExternalRoute(combined);
+      } catch {
+        if (!cancelled) setExternalRoute(null);
+      }
+    };
+
+    void loadExternalRoute();
+    return () => { cancelled = true; };
+  }, [routeVisible, liveLocation, selectedPlace, fallbackStart, liveRoute, travelMode]);
+
+  const route = liveRoute ?? externalRoute ?? gateRoute;
+  const routeStartMode: "live" | "gate" | "unavailable" = liveRoute || externalRoute ? "live" : gateRoute ? "gate" : "unavailable";
   const routeCoordinates = route?.coordinates ?? null;
 
   useEffect(() => {
     setRouteVisible(false);
     setLiveLocation(null);
+    setExternalRoute(null);
+    externalRequestKey.current = "";
     setLocationState("idle");
   }, [selectedPlace?.id]);
 
