@@ -113,6 +113,7 @@ export function findCampusRoute(start: Coordinates, destination: Coordinates, mo
   const endA = getNode(endSnap.a), endB = getNode(endSnap.b), target = getNode(endSnap.projection);
   connect(startA, source, startSnap.road); connect(source, startB, startSnap.road);
   connect(endA, target, endSnap.road); connect(target, endB, endSnap.road);
+  if (pointKey(startSnap.a) === pointKey(endSnap.a) && pointKey(startSnap.b) === pointKey(endSnap.b)) connect(source, target, startSnap.road);
 
   const dist = nodes.map(() => Infinity), previous: Array<{ node: number; road: string } | null> = nodes.map(() => null);
   const visited = nodes.map(() => false); dist[source] = 0;
