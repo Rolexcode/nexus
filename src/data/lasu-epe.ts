@@ -12,10 +12,10 @@ export const lasuEpePlaces: Place[] = [
     category: "Transport",
     description: "The primary entrance and the starting point for campus directions.",
     services: ["Campus entrance", "Pick-up point", "Directions"],
-    coordinates: [6.5921591, 3.995592],
+    coordinates: [6.59195, 3.99485],
     landmark: "LASU Epe campus entrance",
     hours: "Open daily",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 0,
   },
   {
@@ -28,7 +28,7 @@ export const lasuEpePlaces: Place[] = [
     landmark: "Engineering academic axis",
     hours: "Open for scheduled activities",
     announcement: "Check your examination schedule before visiting.",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 6,
   },
   {
@@ -52,7 +52,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5872794, 3.9963176],
     landmark: "Electronics and Computer Engineering area",
     hours: "Mon–Fri · 8:00 AM–6:00 PM",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 7,
   },
   {
@@ -64,7 +64,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.588832, 3.9949779],
     landmark: "Mechanical Engineering area",
     hours: "Open for scheduled practicals",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 6,
   },
   {
@@ -76,7 +76,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5896194, 3.990222],
     landmark: "Before the campus library",
     hours: "Open during campus hours",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 6,
   },
   {
@@ -88,7 +88,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5891758, 3.9914724],
     landmark: "Beyond Library Gate",
     hours: "Mon–Fri · 8:00 AM–4:00 PM",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 8,
   },
   {
@@ -100,7 +100,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5881888, 3.9972666],
     landmark: "Central campus area",
     hours: "Mon–Fri · 9:00 AM–4:00 PM",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 6,
   },
   {
@@ -112,7 +112,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5881555, 3.9962953],
     landmark: "North-east campus axis",
     hours: "Confirm current service hours",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 10,
   },
   {
@@ -124,7 +124,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5887987, 3.9963288],
     landmark: "West of the central academic area",
     hours: "Open for daily prayers",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 8,
   },
   {
@@ -136,7 +136,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5870687, 3.9954245],
     landmark: "West campus walkway",
     hours: "Open for scheduled services",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 7,
   },
   {
@@ -148,7 +148,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5870908, 3.9971326],
     landmark: "North campus open field",
     hours: "Daily · daylight hours",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 10,
   },
   {
@@ -160,7 +160,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5860816, 3.9978694],
     landmark: "North-west residential axis",
     hours: "Residents and authorised visitors",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 11,
   },
   {
@@ -172,7 +172,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5858931, 3.9999459],
     landmark: "North residential axis",
     hours: "Residents and authorised visitors",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 12,
   },
   {
@@ -184,7 +184,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5921591, 4.0014978],
     landmark: "Northern academic axis",
     hours: "Mon–Fri · 8:00 AM–5:00 PM",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 14,
   },
   {
@@ -196,7 +196,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5927247, 4.0004483],
     landmark: "North-east academic axis",
     hours: "Mon–Fri · 8:00 AM–5:00 PM",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 13,
   },
   {
@@ -208,7 +208,7 @@ export const lasuEpePlaces: Place[] = [
     coordinates: [6.5936008, 3.9985058],
     landmark: "South-west campus axis",
     hours: "Open for scheduled activities",
-    dataQuality: "mapped",
+    dataQuality: "demo",
     walkMinutes: 3,
   },
   {
@@ -347,6 +347,70 @@ export const lasuEpePlaces: Place[] = [
     hours: "Restricted area",
     dataQuality: "mapped",
     walkMinutes: 18,
+  },
+,
+  {
+    id: "cpe", name: "CPE", category: "Academic",
+    description: "Campus academic building identified on the student-drawn campus map.",
+    services: ["Lectures", "Department activities"], coordinates: [6.5925805, 3.9967753],
+    landmark: "Near the engineering and agricultural road junction", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 5,
+  },
+  {
+    id: "helipad", name: "Helipad", category: "Transport",
+    description: "The helipad landmark shown on the campus road map.",
+    services: ["Campus landmark", "Wayfinding"], coordinates: [6.5917266, 3.995938],
+    landmark: "Near the engineering axis", hours: "Restricted access",
+    dataQuality: "demo", walkMinutes: 5,
+  },
+  {
+    id: "tennis-court", name: "Tennis Court", category: "Community",
+    description: "Outdoor recreation facility identified on the campus map.",
+    services: ["Tennis", "Recreation"], coordinates: [6.5929132, 3.9984611],
+    landmark: "Staff Club and Engineering Road area", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 8,
+  },
+  {
+    id: "fes-faculty-buildings", name: "FES Faculty Buildings 1 & 2", category: "Academic",
+    description: "Faculty buildings identified on the campus road map.",
+    services: ["Lectures", "Faculty offices"], coordinates: [6.5933236, 4.00056],
+    landmark: "Northern academic area", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 10,
+  },
+  {
+    id: "farm", name: "Farm", category: "Academic",
+    description: "The campus farm area identified on the student map.",
+    services: ["Agricultural practicals", "Field activities"], coordinates: [6.5924031, 3.9998901],
+    landmark: "Along Agric Road", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 10,
+  },
+  {
+    id: "lecture-hall", name: "Lecture Hall", category: "Academic",
+    description: "Lecture hall landmark identified on the campus road map.",
+    services: ["Lectures", "Academic events"], coordinates: [6.5922145, 4.0006493],
+    landmark: "Along Agric Road", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 12,
+  },
+  {
+    id: "admin-room", name: "Admin Room", category: "Administration",
+    description: "Administrative room identified near the Admin Block.",
+    services: ["Administrative enquiries"], coordinates: [6.5877673, 3.9962618],
+    landmark: "Near Admin Block", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 8,
+  },
+  {
+    id: "mini-mart", name: "Mini Mart", category: "Business & service",
+    description: "Mini mart landmark identified on the student campus map.",
+    services: ["Convenience shopping"], coordinates: [6.5857046, 4.0013191],
+    landmark: "Downtown residential area", hours: "Confirm locally",
+    dataQuality: "demo", walkMinutes: 15,
+  },
+  {
+    id: "army-barracks", name: "Army Barracks", category: "Community",
+    description: "Army Barracks landmark shown at the southern edge of the campus map.",
+    services: ["Campus landmark", "Wayfinding"], coordinates: [6.5837083, 3.9981039],
+    landmark: "Southern edge of the mapped area", hours: "Restricted area",
+    dataQuality: "demo", walkMinutes: 18,
   },
 
 ];
