@@ -26,7 +26,8 @@ export default function CampusMapPage() {
   const initialPlace = places.find((place) => place.id === initialPlaceId) ?? null;
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(initialPlace);
-  const [directionsOpen, setDirectionsOpen] = useState(false);\n  const [travelMode, setTravelMode] = useState<TravelMode>("walk");
+  const [directionsOpen, setDirectionsOpen] = useState(false);
+  const [travelMode, setTravelMode] = useState<TravelMode>("walk");
   const [routeInfo, setRouteInfo] = useState<{ route: CampusRoute | null; startMode: "live" | "gate" | "unavailable" }>({ route: null, startMode: "unavailable" });
   const handleRouteUpdate = useCallback((route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => {
     setRouteInfo({ route, startMode });
@@ -136,6 +137,11 @@ export default function CampusMapPage() {
 
           {directionsOpen ? (
             <div className={styles.directionPanel}>
+              <div className={styles.travelModes} role="group" aria-label="Choose travel mode">
+                <button type="button" aria-pressed={travelMode === "walk"} className={travelMode === "walk" ? styles.travelModeActive : ""} onClick={() => setTravelMode("walk")}>Walk</button>
+                <button type="button" aria-pressed={travelMode === "bicycle"} className={travelMode === "bicycle" ? styles.travelModeActive : ""} onClick={() => setTravelMode("bicycle")}>Bicycle</button>
+                <button type="button" aria-pressed={travelMode === "tricycle"} className={travelMode === "tricycle" ? styles.travelModeActive : ""} onClick={() => setTravelMode("tricycle")}>Tricycle</button>
+              </div>
               <div className={styles.directionHeader}>
                 <span><small>Campus walking route</small><strong>To {selectedPlace.name}</strong></span>
                 <span className="direction-time">{routeInfo.route ? `${Math.max(1, Math.ceil(routeInfo.route.distanceMetres / 75))} min` : "Route check"}</span>
@@ -155,7 +161,7 @@ export default function CampusMapPage() {
               ) : (
                 <div className="direction-summary"><Navigation size={16} /><span>Nexus could not confirm a continuous path between these points in the digitised network. We will not draw a straight line and label it as a walkable route.</span></div>
               )}
-              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode=walking`} target="_blank" rel="noreferrer">
+              <a className={styles.googleDirections} href={`https://www.google.com/maps/dir/?api=1&destination=${routeInfo.startMode === "gate" ? "6.5921591,3.995592" : `${selectedPlace.coordinates[0]},${selectedPlace.coordinates[1]}`}&travelmode={travelMode}`} target="_blank" rel="noreferrer">
                 <Navigation size={17} /> {routeInfo.startMode === "gate" ? "Open route to campus entrance" : "Open walking directions in Google Maps"}
               </a>
               <p className="direction-disclaimer">The student map has been digitised as an initial route network. Road access classifications and turn instructions remain provisional until verified on campus. Follow local signs and conditions.</p>
