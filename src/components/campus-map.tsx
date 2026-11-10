@@ -107,7 +107,7 @@ function MapViewport({
     if (place) {
       map.flyTo(place.coordinates, 18, { duration: 0.6 });
     } else {
-      map.flyTo(CAMPUS_CENTER, 17, { duration: 0.6 });
+      map.flyTo(CAMPUS_CENTER, 16, { duration: 0.6 });
     }
   }, [map, place, routeStartCoordinates, routeVisible]);
 
@@ -196,7 +196,7 @@ export function CampusMap({
   return (
     <MapContainer
       center={CAMPUS_CENTER}
-      zoom={17}
+      zoom={16}
       minZoom={15}
       maxZoom={20}
       zoomControl={false}
