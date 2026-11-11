@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Navigation, Search, X } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Search, X, Map as MapIcon, Satellite } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { lasuEpePlaces as places } from "@/data/lasu-epe";
@@ -27,6 +27,8 @@ export default function CampusMapPage() {
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(initialPlace);
   const [directionsOpen, setDirectionsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [mapStyle, setMapStyle] = useState<"street" | "satellite">("street");
   const [travelMode, setTravelMode] = useState<TravelMode>("walk");
   const [routeInfo, setRouteInfo] = useState<{ route: CampusRoute | null; startMode: "live" | "gate" | "unavailable" }>({ route: null, startMode: "unavailable" });
   const handleRouteUpdate = useCallback((route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => {
@@ -45,6 +47,7 @@ export default function CampusMapPage() {
   const selectPlace = (place: Place) => {
     setSelectedPlace(place);
     setDirectionsOpen(false);
+    setDetailsOpen(false);
     setRouteInfo({ route: null, startMode: "unavailable" });
     setQuery("");
   };
@@ -52,7 +55,7 @@ export default function CampusMapPage() {
   return (
     <main className={styles.page}>
       <div className={styles.map}>
-        <CampusMap places={filteredPlaces} selectedPlace={selectedPlace} onSelect={selectPlace} travelMode={travelMode} onRouteUpdate={handleRouteUpdate} />
+        <CampusMap places={filteredPlaces} selectedPlace={selectedPlace} onSelect={selectPlace} travelMode={travelMode} onRouteUpdate={handleRouteUpdate} mapStyle={mapStyle} />
       </div>
 
       <header className={styles.toolbar}>
@@ -64,6 +67,11 @@ export default function CampusMapPage() {
           <strong>LASU Epe</strong>
         </div>
       </header>
+
+      <div className={styles.mapStyleSwitch} role="group" aria-label="Map appearance">
+        <button type="button" className={mapStyle === "street" ? styles.mapStyleActive : ""} aria-pressed={mapStyle === "street"} onClick={() => setMapStyle("street")}><MapIcon size={15} /> Map</button>
+        <button type="button" className={mapStyle === "satellite" ? styles.mapStyleActive : ""} aria-pressed={mapStyle === "satellite"} onClick={() => setMapStyle("satellite")}><Satellite size={15} /> Satellite</button>
+      </div>
 
       <section className={styles.searchPanel} aria-label="Search campus places">
         <label className={styles.searchBox}>
@@ -113,14 +121,19 @@ export default function CampusMapPage() {
           <span>Choose a suggested destination, search, or tap a pin.</span>
         </div>
       ) : (
-        <aside className={styles.destinationCard} aria-label={`${selectedPlace.name} destination`}>
+        <>
+        <button type="button" className={`${styles.directionsToggle} ${directionsOpen ? styles.directionsToggleActive : ""}`} onClick={() => setDetailsOpen((open) => !open)} aria-label={detailsOpen ? "Hide destination details" : "Show destination and directions"} aria-expanded={detailsOpen}>
+          <Navigation size={21} />
+          {directionsOpen ? <span className={styles.routeActiveDot} /> : null}
+        </button>
+        {detailsOpen ? <aside className={styles.destinationCard} aria-label={`${selectedPlace.name} destination`}>
           <div className={styles.destinationTop}>
             <div>
               <small>{selectedPlace.category}</small>
               <h1>{selectedPlace.name}</h1>
               <p>{selectedPlace.landmark}</p>
             </div>
-            <button type="button" className={styles.close} onClick={() => { setSelectedPlace(null); setDirectionsOpen(false); }} aria-label="Close destination">
+            <button type="button" className={styles.close} onClick={() => { setSelectedPlace(null); setDirectionsOpen(false); setDetailsOpen(false); }} aria-label="Close destination">
               <X size={18} />
             </button>
           </div>
@@ -168,7 +181,8 @@ export default function CampusMapPage() {
               <p className="direction-disclaimer">Routing data: © OpenStreetMap contributors · FOSSGIS OSRM</p>
             </div>
           ) : null}
-        </aside>
+        </aside> : null}
+        </>
       )}
     </main>
   );
