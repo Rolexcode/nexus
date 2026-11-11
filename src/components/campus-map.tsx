@@ -33,6 +33,7 @@ type CampusMapProps = {
   selectedPlace: Place | null;
   onSelect: (place: Place) => void;
   travelMode: TravelMode;
+  mapStyle: "street" | "satellite";
   onRouteUpdate?: (route: CampusRoute | null, startMode: "live" | "gate" | "unavailable") => void;
 };
 
@@ -133,6 +134,7 @@ export function CampusMap({
   onSelect,
   onRouteUpdate,
   travelMode,
+  mapStyle,
 }: CampusMapProps) {
   const [routeVisible, setRouteVisible] = useState(false);
   const [routeStartId] = useState("main-gate");
@@ -275,7 +277,7 @@ export function CampusMap({
       className="campus-map"
       attributionControl
     >
-      <CampusBaseLayers />
+      <CampusBaseLayers mapStyle={mapStyle} />
       <ZoomControl position="bottomright" />
       <ScaleControl position="bottomleft" imperial={false} />
       <MapViewport
