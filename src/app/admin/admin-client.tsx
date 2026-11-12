@@ -93,14 +93,13 @@ export function AdminClient() {
   };
 
   const loadModeration = async () => {
+    const [servicesResult, boardResult] = await Promise.allSettled([listServiceSubmissions(), listBoardSubmissions()]);
+    setServiceSubmissions(servicesResult.status === "fulfilled" ? servicesResult.value : []);
+    setBoardSubmissions(boardResult.status === "fulfilled" ? boardResult.value : []);
     try {
-      const [services, board, feedback] = await Promise.all([listServiceSubmissions(), listBoardSubmissions(), listNexusSuggestions()]);
-      setServiceSubmissions(services);
-      setBoardSubmissions(board);
-      setSuggestions(feedback);
+      setSuggestions(await listNexusSuggestions());
     } catch {
-      setServiceSubmissions([]);
-      setBoardSubmissions([]);
+      // Feedback storage may not be enabled until the Firestore rules update is published.
       setSuggestions([]);
     }
   };
