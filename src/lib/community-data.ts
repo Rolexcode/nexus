@@ -36,6 +36,19 @@ export type ServiceReview = {
 export type BoardPostType = "business-update" | "student-event";
 export type BoardPostStatus = "pending" | "approved" | "rejected";
 
+export type NexusSuggestionStatus = "new" | "reviewed";
+export type NexusSuggestion = {
+  id: string;
+  category: string;
+  message: string;
+  contact: string;
+  source: string;
+  status: NexusSuggestionStatus;
+  createdAt: string;
+  reviewedAt?: string;
+};
+
+
 export type CampusBoardPost = {
   id: string;
   type: BoardPostType;
@@ -256,4 +269,55 @@ export async function approveBoardSubmission(id: string) {
 
 export async function rejectBoardSubmission(id: string) {
   await deleteDocument("nexus-board-submissions", id);
+}
+
+export async function submitNexusSuggestion(input: {
+  category: string;
+  message: string;
+  contact?: string;
+}) {
+  if (!FIREBASE_PROJECT_ID) throw new Error("Feedback is temporarily unavailable.");
+  const id = crypto.randomUUID();
+  const suggestion: NexusSuggestion = {
+    id,
+    category: input.category.trim().slice(0, 48),
+    message: input.message.trim().slice(0, 2000),
+    contact: (input.contact ?? "").trim().slice(0, 120),
+    source: "nexus-feedback",
+    status: "new",
+    createdAt: new Date().toISOString(),
+  };
+  const response = await fetch(`${projectBase()}/nexus-suggestions?documentId=${encodeURIComponent(id)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fields: {
+        category: { stringValue: suggestion.category },
+        message: { stringValue: suggestion.message },
+        contact: { stringValue: suggestion.contact },
+        source: { stringValue: suggestion.source },
+        status: { stringValue: suggestion.status },
+        createdAt: { timestampValue: suggestion.createdAt },
+      },
+    }),
+  });
+  if (!response.ok) {
+    if (response.status === 403) throw new Error("Feedback storage is not enabled yet. Please try again later.");
+    throw new Error("Could not send your feedback. Please try again.");
+  }
+  return suggestion;
+}
+
+export function listNexusSuggestions() {
+  return listCollection<NexusSuggestion>("nexus-suggestions", true);
+}
+
+export async function markNexusSuggestionReviewed(id: string) {
+  const suggestion = await readDocument<NexusSuggestion>("nexus-suggestions", id, true);
+  if (!suggestion) throw new Error("Feedback item was not found.");
+  const reviewed: NexusSuggestion = { ...suggestion, status: "reviewed", reviewedAt: new Date().toISOString() };
+  await writeDocument("nexus-suggestions", id, reviewed as unknown as Record<string, unknown>, {
+    status: { stringValue: "reviewed" },
+  });
+  return reviewed;
 }
