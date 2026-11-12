@@ -306,7 +306,7 @@
   .searchBox { min-height: 50px; }
   .suggestions { padding: 9px; }
   .suggestionList button { min-height: 34px; padding: 0 9px; }
-  .destinationCard { right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 52vh; }
+  .destinationCard { right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 34vh; }
   .hint { right: 12px; bottom: 18px; left: 12px; justify-content: center; transform: none; }
 }
 
@@ -331,7 +331,7 @@
     bottom: max(10px, env(safe-area-inset-bottom));
     left: 10px;
     width: auto;
-    max-height: min(42vh, 390px);
+    max-height: min(34vh, 320px);
     padding: 14px;
     border-radius: 18px 18px 14px 14px;
   }
