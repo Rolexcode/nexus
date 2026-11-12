@@ -187,7 +187,7 @@ export function NexusAuthShell({ children }: { children: ReactNode }) {
   };
 
   const sendPasswordReset = async () => {
-    if (!/^\\S+@\\S+\\.\\S+$/.test(email.trim())) {
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setError("Enter your email address first, then choose Forgot password.");
       return;
     }
