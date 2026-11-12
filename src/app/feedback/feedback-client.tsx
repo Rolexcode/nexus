@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useState } from "react";
 import { CheckCircle2, Send, ShieldCheck } from "lucide-react";
 import { submitNexusSuggestion } from "@/lib/community-data";
 import styles from "./feedback.module.css";
@@ -15,7 +15,6 @@ export function FeedbackClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
-  const startedAt = useRef(Date.now());
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -33,20 +32,9 @@ export function FeedbackClient() {
       setSent(true);
       return;
     }
-    if (Date.now() - startedAt.current < 1800) {
-      setError("Please take a moment to complete the form.");
-      return;
-    }
-    const lastSent = Number(window.localStorage.getItem("nexus-feedback-last") ?? "0");
-    if (Date.now() - lastSent < 15000) {
-      setError("Please wait a little before sending another suggestion.");
-      return;
-    }
-
     setBusy(true);
     try {
       await submitNexusSuggestion({ category, message: message.trim(), contact: contact.trim() });
-      window.localStorage.setItem("nexus-feedback-last", String(Date.now()));
       setSent(true);
       setMessage("");
       setContact("");
@@ -72,7 +60,7 @@ export function FeedbackClient() {
             <CheckCircle2 size={32} />
             <h2>Thank you. We've got it.</h2>
             <p>Your feedback has been sent to the Nexus team. It will help guide what we improve next.</p>
-            <button type="button" onClick={() => { setSent(false); setCategory(categories[0]); startedAt.current = Date.now(); }}>Send another suggestion</button>
+            <button type="button" onClick={() => { setSent(false); setCategory(categories[0]); }}>Send another suggestion</button>
           </div>
         ) : (
           <form onSubmit={submit}>
