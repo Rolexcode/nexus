@@ -79,6 +79,7 @@ export function AdminClient() {
   const [serviceSubmissions, setServiceSubmissions] = useState<CommunityServiceListing[]>([]);
   const [boardSubmissions, setBoardSubmissions] = useState<CampusBoardPost[]>([]);
   const [suggestions, setSuggestions] = useState<NexusSuggestion[]>([]);
+  const [suggestionsError, setSuggestionsError] = useState("");
   const [moderationBusy, setModerationBusy] = useState("");
 
   const check = async () => {
@@ -98,9 +99,10 @@ export function AdminClient() {
     setBoardSubmissions(boardResult.status === "fulfilled" ? boardResult.value : []);
     try {
       setSuggestions(await listNexusSuggestions());
+      setSuggestionsError("");
     } catch {
-      // Feedback storage may not be enabled until the Firestore rules update is published.
       setSuggestions([]);
+      setSuggestionsError("Feedback could not be loaded. Check the admin connection and Firestore permissions, then refresh.");
     }
   };
 
@@ -264,7 +266,7 @@ export function AdminClient() {
         <div className={styles.sectionHeading}><div><span>Product feedback</span><h2>Student suggestions</h2></div><small>{suggestions.filter((item) => item.status === "new").length} new</small></div>
         <div className={styles.moderationGrid}>
           <div className={styles.moderationColumn}>
-            {suggestions.length ? [...suggestions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => (
+            {suggestionsError ? <p className={styles.empty} role="alert">{suggestionsError}</p> : suggestions.length ? [...suggestions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => (
               <article key={item.id}>
                 <strong>{item.category}</strong>
                 <p>{item.message}</p>
