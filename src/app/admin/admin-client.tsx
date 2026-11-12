@@ -29,8 +29,11 @@ import {
   listServiceSubmissions,
   rejectBoardSubmission,
   rejectServiceSubmission,
+  listNexusSuggestions,
+  markNexusSuggestionReviewed,
   type CampusBoardPost,
   type CommunityServiceListing,
+  type NexusSuggestion,
 } from "@/lib/community-data";
 import { initialIncidents, type Incident, type IncidentStatus } from "@/lib/data";
 import { useLocalStorageState } from "@/lib/use-local-storage-state";
@@ -75,6 +78,7 @@ export function AdminClient() {
   const [caseNotice, setCaseNotice] = useState("");
   const [serviceSubmissions, setServiceSubmissions] = useState<CommunityServiceListing[]>([]);
   const [boardSubmissions, setBoardSubmissions] = useState<CampusBoardPost[]>([]);
+  const [suggestions, setSuggestions] = useState<NexusSuggestion[]>([]);
   const [moderationBusy, setModerationBusy] = useState("");
 
   const check = async () => {
@@ -89,13 +93,14 @@ export function AdminClient() {
   };
 
   const loadModeration = async () => {
+    const [servicesResult, boardResult] = await Promise.allSettled([listServiceSubmissions(), listBoardSubmissions()]);
+    setServiceSubmissions(servicesResult.status === "fulfilled" ? servicesResult.value : []);
+    setBoardSubmissions(boardResult.status === "fulfilled" ? boardResult.value : []);
     try {
-      const [services, board] = await Promise.all([listServiceSubmissions(), listBoardSubmissions()]);
-      setServiceSubmissions(services);
-      setBoardSubmissions(board);
+      setSuggestions(await listNexusSuggestions());
     } catch {
-      setServiceSubmissions([]);
-      setBoardSubmissions([]);
+      // Feedback storage may not be enabled until the Firestore rules update is published.
+      setSuggestions([]);
     }
   };
 
@@ -181,6 +186,16 @@ export function AdminClient() {
     }
   };
 
+  const reviewSuggestion = async (id: string) => {
+    setModerationBusy(`suggestion-${id}`);
+    try {
+      await markNexusSuggestionReviewed(id);
+      await loadModeration();
+    } finally {
+      setModerationBusy("");
+    }
+  };
+
   if (checking) return <section className={styles.state}><ShieldCheck size={24} /><strong>Checking admin access…</strong></section>;
 
   if (!isAdmin) {
@@ -245,6 +260,25 @@ export function AdminClient() {
         </div>
       </section>
 
+      <section className={styles.moderation}>
+        <div className={styles.sectionHeading}><div><span>Product feedback</span><h2>Student suggestions</h2></div><small>{suggestions.filter((item) => item.status === "new").length} new</small></div>
+        <div className={styles.moderationGrid}>
+          <div className={styles.moderationColumn}>
+            {suggestions.length ? [...suggestions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => (
+              <article key={item.id}>
+                <strong>{item.category}</strong>
+                <p>{item.message}</p>
+                <small>{formatTimestamp(item.createdAt)}{item.contact ? ` · Reply to: ${item.contact}` : " · Anonymous"}</small>
+                <div>
+                  <span className={item.status === "reviewed" ? styles.done : styles.status}>{item.status === "reviewed" ? "Reviewed" : "New"}</span>
+                  {item.status === "new" ? <button disabled={moderationBusy === `suggestion-${item.id}`} onClick={() => void reviewSuggestion(item.id)}>Mark reviewed</button> : null}
+                </div>
+              </article>
+            )) : <p className={styles.empty}>No student suggestions yet.</p>}
+          </div>
+        </div>
+      </section>
+
       {selected ? (
         <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
           <section className={styles.reviewDialog} role="dialog" aria-modal="true" aria-labelledby="admin-case-title">
@@ -267,7 +301,7 @@ export function AdminClient() {
               <div className={styles.privateHeading}><ShieldCheck size={17} /><div><strong>Reporter & evidence</strong><small>Visible only to authorised admins.</small></div></div>
               {caseLoading ? <p>Loading private case details…</p> : null}
               {caseNotice ? <p>{caseNotice}</p> : null}
-              {reporter ? <div className={styles.reporterGrid}><span><small>Reporter</small><strong>{reporter.name}</strong></span><span><small>Matric</small><strong>{reporter.matricNumber}</strong></span><span><small>Email</small><strong>{reporter.email}</strong></span><span><small>Department / level</small><strong>{reporter.department || "—"} {reporter.level ? `· ${reporter.level}` : ""}</strong></span></div> : null}
+              {reporter ? <div className={styles.reporterGrid}><span><small>Reporter</small><strong>{reporter.name}</strong></span><span><small>Matric</small><strong>{reporter.matricNumber || "Not provided"}</strong></span><span><small>Email</small><strong>{reporter.email}</strong></span><span><small>Department / level</small><strong>{reporter.department || "—"} {reporter.level ? `· ${reporter.level}` : ""}</strong></span></div> : null}
               {evidence ? <div className={styles.photo}><span><Camera size={15} /> <strong>Attached photo</strong> · {evidence.fileName}</span><img src={evidence.dataUrl} alt={`Evidence for ${selected.title}`} /></div> : selected.evidenceLabel ? <div className={styles.noPhoto}><FileImage size={16} /> Evidence was noted on this older case, but the original image is not stored in the current evidence collection.</div> : null}
             </section>
 

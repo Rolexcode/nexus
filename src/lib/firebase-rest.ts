@@ -138,6 +138,24 @@ export async function signInFirebaseAccount(email: string, password: string) {
   });
 }
 
+export async function sendFirebasePasswordResetEmail(email: string) {
+  if (!FIREBASE_API_KEY) throw new Error("Firebase is not configured yet.");
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(FIREBASE_API_KEY)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestType: "PASSWORD_RESET",
+        email: email.trim().toLowerCase(),
+      }),
+    },
+  );
+  const payload = await response.json() as { error?: { message?: string } };
+  if (!response.ok && payload.error?.message?.includes("EMAIL_NOT_FOUND")) return;
+  if (!response.ok) throw new Error(firebaseMessage(payload.error?.message));
+}
+
 export function signOutFirebaseAccount() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(AUTH_CACHE_KEY);

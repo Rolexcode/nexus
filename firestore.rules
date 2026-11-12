@@ -81,6 +81,32 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Public feedback: anyone may send a bounded suggestion without creating an account.
+    // Only administrators can read or moderate these submissions.
+    match /nexus-suggestions/{suggestionId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'json', 'category', 'message', 'contact', 'source', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'json', 'category', 'message', 'contact', 'source', 'status', 'createdAt'
+        ])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() <= 2600
+        && request.resource.data.category is string
+        && request.resource.data.category.size() <= 48
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 8
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.contact is string
+        && request.resource.data.contact.size() <= 120
+        && request.resource.data.source == 'nexus-feedback'
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt is timestamp;
+
+      allow read: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

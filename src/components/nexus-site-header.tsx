@@ -11,6 +11,7 @@ const mainLinks = [
   ["Reports", "/reports"],
   ["Services", "/services"],
   ["Updates", "/updates"],
+  ["Feedback", "/feedback"],
 ] as const;
 
 export function NexusSiteHeader() {
