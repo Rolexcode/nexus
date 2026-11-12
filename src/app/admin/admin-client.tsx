@@ -29,8 +29,11 @@ import {
   listServiceSubmissions,
   rejectBoardSubmission,
   rejectServiceSubmission,
+  listNexusSuggestions,
+  markNexusSuggestionReviewed,
   type CampusBoardPost,
   type CommunityServiceListing,
+  type NexusSuggestion,
 } from "@/lib/community-data";
 import { initialIncidents, type Incident, type IncidentStatus } from "@/lib/data";
 import { useLocalStorageState } from "@/lib/use-local-storage-state";
@@ -75,6 +78,7 @@ export function AdminClient() {
   const [caseNotice, setCaseNotice] = useState("");
   const [serviceSubmissions, setServiceSubmissions] = useState<CommunityServiceListing[]>([]);
   const [boardSubmissions, setBoardSubmissions] = useState<CampusBoardPost[]>([]);
+  const [suggestions, setSuggestions] = useState<NexusSuggestion[]>([]);
   const [moderationBusy, setModerationBusy] = useState("");
 
   const check = async () => {
@@ -90,12 +94,14 @@ export function AdminClient() {
 
   const loadModeration = async () => {
     try {
-      const [services, board] = await Promise.all([listServiceSubmissions(), listBoardSubmissions()]);
+      const [services, board, feedback] = await Promise.all([listServiceSubmissions(), listBoardSubmissions(), listNexusSuggestions()]);
       setServiceSubmissions(services);
       setBoardSubmissions(board);
+      setSuggestions(feedback);
     } catch {
       setServiceSubmissions([]);
       setBoardSubmissions([]);
+      setSuggestions([]);
     }
   };
 
@@ -181,6 +187,16 @@ export function AdminClient() {
     }
   };
 
+  const reviewSuggestion = async (id: string) => {
+    setModerationBusy(`suggestion-${id}`);
+    try {
+      await markNexusSuggestionReviewed(id);
+      await loadModeration();
+    } finally {
+      setModerationBusy("");
+    }
+  };
+
   if (checking) return <section className={styles.state}><ShieldCheck size={24} /><strong>Checking admin access…</strong></section>;
 
   if (!isAdmin) {
@@ -241,6 +257,25 @@ export function AdminClient() {
             {boardSubmissions.length ? boardSubmissions.map((item) => (
               <article key={item.id}><strong>{item.title}</strong><p>{item.body}</p><small>{item.dateLabel} · {item.organizer}</small><div><button disabled={moderationBusy === `board-${item.id}`} onClick={() => void moderateBoard(item.id, "reject")}>Reject</button><button disabled={moderationBusy === `board-${item.id}`} onClick={() => void moderateBoard(item.id, "approve")}>Approve</button></div></article>
             )) : <p className={styles.empty}>No pending campus updates.</p>}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.moderation}>
+        <div className={styles.sectionHeading}><div><span>Product feedback</span><h2>Student suggestions</h2></div><small>{suggestions.filter((item) => item.status === "new").length} new</small></div>
+        <div className={styles.moderationGrid}>
+          <div className={styles.moderationColumn}>
+            {suggestions.length ? [...suggestions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => (
+              <article key={item.id}>
+                <strong>{item.category}</strong>
+                <p>{item.message}</p>
+                <small>{formatTimestamp(item.createdAt)}{item.contact ? ` · Reply to: ${item.contact}` : " · Anonymous"}</small>
+                <div>
+                  <span className={item.status === "reviewed" ? styles.done : styles.status}>{item.status === "reviewed" ? "Reviewed" : "New"}</span>
+                  {item.status === "new" ? <button disabled={moderationBusy === `suggestion-${item.id}`} onClick={() => void reviewSuggestion(item.id)}>Mark reviewed</button> : null}
+                </div>
+              </article>
+            )) : <p className={styles.empty}>No student suggestions yet.</p>}
           </div>
         </div>
       </section>
