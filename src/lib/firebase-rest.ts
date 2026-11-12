@@ -152,6 +152,7 @@ export async function sendFirebasePasswordResetEmail(email: string) {
     },
   );
   const payload = await response.json() as { error?: { message?: string } };
+  if (!response.ok && payload.error?.message?.includes("EMAIL_NOT_FOUND")) return;
   if (!response.ok) throw new Error(firebaseMessage(payload.error?.message));
 }
 
