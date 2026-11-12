@@ -27,7 +27,7 @@ export default function CampusMapPage() {
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(initialPlace);
   const [directionsOpen, setDirectionsOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(initialPlace));
   const [mapStyle, setMapStyle] = useState<"street" | "satellite">("street");
   const [travelMode, setTravelMode] = useState<TravelMode>("walk");
   const [routeInfo, setRouteInfo] = useState<{ route: CampusRoute | null; startMode: "live" | "gate" | "unavailable" }>({ route: null, startMode: "unavailable" });
@@ -47,7 +47,8 @@ export default function CampusMapPage() {
   const selectPlace = (place: Place) => {
     setSelectedPlace(place);
     setDirectionsOpen(false);
-    setDetailsOpen(false);
+    // Show the destination action card as soon as a place is selected.
+    setDetailsOpen(true);
     setRouteInfo({ route: null, startMode: "unavailable" });
     setQuery("");
   };
