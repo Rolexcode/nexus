@@ -292,6 +292,7 @@ export async function submitNexusSuggestion(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       fields: {
+        json: { stringValue: JSON.stringify(suggestion) },
         category: { stringValue: suggestion.category },
         message: { stringValue: suggestion.message },
         contact: { stringValue: suggestion.contact },
