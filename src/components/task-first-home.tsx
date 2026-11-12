@@ -3,6 +3,7 @@ import {
   ArrowRight,
   CalendarDays,
   MapPin,
+  MessageSquareText,
   Navigation,
   Search,
   Store,
@@ -56,6 +57,15 @@ export function TaskFirstHome() {
             </a>
           ))}
         </div>
+      </section>
+
+      <section className={styles.feedbackCallout}>
+        <div>
+          <span>Help us improve Nexus</span>
+          <h2>Something missing or confusing?</h2>
+          <p>Share an idea, report a rough edge or tell us what would make campus life easier. No account needed.</p>
+        </div>
+        <a href="/feedback"><MessageSquareText size={17} /> Share feedback <ArrowRight size={17} /></a>
       </section>
     </main>
   );
