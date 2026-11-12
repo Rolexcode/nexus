@@ -301,7 +301,7 @@ export function AdminClient() {
               <div className={styles.privateHeading}><ShieldCheck size={17} /><div><strong>Reporter & evidence</strong><small>Visible only to authorised admins.</small></div></div>
               {caseLoading ? <p>Loading private case details…</p> : null}
               {caseNotice ? <p>{caseNotice}</p> : null}
-              {reporter ? <div className={styles.reporterGrid}><span><small>Reporter</small><strong>{reporter.name}</strong></span><span><small>Matric</small><strong>{reporter.matricNumber}</strong></span><span><small>Email</small><strong>{reporter.email}</strong></span><span><small>Department / level</small><strong>{reporter.department || "—"} {reporter.level ? `· ${reporter.level}` : ""}</strong></span></div> : null}
+              {reporter ? <div className={styles.reporterGrid}><span><small>Reporter</small><strong>{reporter.name}</strong></span><span><small>Matric</small><strong>{reporter.matricNumber || "Not provided"}</strong></span><span><small>Email</small><strong>{reporter.email}</strong></span><span><small>Department / level</small><strong>{reporter.department || "—"} {reporter.level ? `· ${reporter.level}` : ""}</strong></span></div> : null}
               {evidence ? <div className={styles.photo}><span><Camera size={15} /> <strong>Attached photo</strong> · {evidence.fileName}</span><img src={evidence.dataUrl} alt={`Evidence for ${selected.title}`} /></div> : selected.evidenceLabel ? <div className={styles.noPhoto}><FileImage size={16} /> Evidence was noted on this older case, but the original image is not stored in the current evidence collection.</div> : null}
             </section>
 
