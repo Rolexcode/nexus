@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Navigation, Search, X, Map as MapIcon, Satellite } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, LocateFixed, Search, X, Map as MapIcon, Satellite } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { lasuEpePlaces as places } from "@/data/lasu-epe";
@@ -122,9 +122,16 @@ export default function CampusMapPage() {
         </div>
       ) : (
         <>
-        <button type="button" className={`${styles.directionsToggle} ${directionsOpen ? styles.directionsToggleActive : ""}`} onClick={() => setDetailsOpen((open) => !open)} aria-label={detailsOpen ? "Hide destination details" : "Show destination and directions"} aria-expanded={detailsOpen}>
-          <Navigation size={21} />
-          {directionsOpen ? <span className={styles.routeActiveDot} /> : null}
+        <button
+          type="button"
+          className={`${styles.directionsToggle} ${detailsOpen ? styles.directionsToggleActive : ""}`}
+          onClick={() => setDetailsOpen((open) => !open)}
+          aria-label={detailsOpen ? "Hide directions panel" : `Show directions for ${selectedPlace.name}`}
+          aria-expanded={detailsOpen}
+          title={detailsOpen ? "Hide directions" : "Show directions"}
+        >
+          <LocateFixed size={22} />
+          {routeInfo.route ? <span className={styles.routeActiveDot} /> : null}
         </button>
         {detailsOpen ? <aside className={styles.destinationCard} aria-label={`${selectedPlace.name} destination`}>
           <div className={styles.destinationTop}>
@@ -133,7 +140,7 @@ export default function CampusMapPage() {
               <h1>{selectedPlace.name}</h1>
               <p>{selectedPlace.landmark}</p>
             </div>
-            <button type="button" className={styles.close} onClick={() => { setSelectedPlace(null); setDirectionsOpen(false); setDetailsOpen(false); }} aria-label="Close destination">
+            <button type="button" className={styles.close} onClick={() => { setDirectionsOpen(false); setDetailsOpen(false); }} aria-label="Hide destination panel">
               <X size={18} />
             </button>
           </div>
